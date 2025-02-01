@@ -1,0 +1,6 @@
+find . -type f -exec sed -i 's#/Apo/#/MyUser/#g' {} +
+
+
+find . -type f -exec sed -i 's/\/Apo\//\/MyUser\//g' {} +
+
+

@@ -1,0 +1,25 @@
+# Ignore Visual Studio generated files
+.vs/
+.vscode/
+*.VC.db
+
+# Ignore Precompiled Headers
+*.ipch
+*.pch
+
+# Ignore CMake Build Directories
+build/
+*.obj
+*.lib
+*.exp
+*.ilk
+*.log
+*.sdf
+
+# Ignore CMake Precompiled Headers
+build/.vs/Py4GW/v17/ipch/
+build/Py4GW.dir/Release/cmake_pch.pch
+
+# Ignore Debug and Release Build Artifacts
+build/vendor/gwca/gwca.dir/Release/
+build/Py4GW.dir/Release/
