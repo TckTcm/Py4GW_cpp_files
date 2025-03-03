@@ -24,6 +24,35 @@ std::vector<uintptr_t> FillVectorFromPointerArray(const GW::Array<void*>& arr) {
 }
 
 
+std::vector<uint32_t> GetSiblingFrameIDs(uint32_t frame_id) {
+	std::vector<uint32_t> sibling_ids;
+
+	GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
+
+	if (!frame) {
+		return sibling_ids;
+	}
+
+	const GW::UI::FrameRelation* relation = &frame->relation;
+
+	if (!relation)
+		return sibling_ids;
+
+	auto it = relation->siblings.begin();
+
+	for (; it != relation->siblings.end(); ++it) {
+		GW::UI::FrameRelation& sibling = *it;
+		GW::UI::Frame* frame = sibling.GetFrame();
+		if (frame) {
+			sibling_ids.push_back(frame->frame_id);
+		}
+	}
+
+	return sibling_ids;
+}
+
+
+
 void UIFrame::GetContext() {
 
 	GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
@@ -35,16 +64,22 @@ void UIFrame::GetContext() {
     GW::UI::Frame* parent = frame->relation.GetParent();
 	parent_id = parent ? parent->frame_id : 0;
 	frame_hash = frame->relation.frame_hash_id;
-	field1_0x0 = frame->field1_0x0;
-	field2_0x4 = frame->field2_0x4;
+	is_visible = frame->IsVisible();
+	is_created = frame->IsCreated();
+
 	frame_layout = frame->frame_layout;
+	visibility_flags = frame->visibility_flags;
+	type = frame->type;
+	template_type = frame->template_type;
+	frame_callbacks = ConvertUIInteractionCallbacks(frame->frame_callbacks);
+	child_offset_id = frame->child_offset_id;
+
+	field1_0x0 = frame->field1_0x0;
+	field2_0x4 = frame->field2_0x4;	
 	field3_0xc = frame->field3_0xc;
 	field4_0x10 = frame->field4_0x10;
 	field5_0x14 = frame->field5_0x14;
-	visibility_flags = frame->visibility_flags;
 	field7_0x1c = frame->field7_0x1c;
-	type = frame->type;
-	template_type = frame->template_type;
 	field10_0x28 = frame->field10_0x28;
 	field11_0x2c = frame->field11_0x2c;
 	field12_0x30 = frame->field12_0x30;
@@ -72,7 +107,6 @@ void UIFrame::GetContext() {
 	field34_0x94 = frame->field34_0x94;
 	field35_0x98 = frame->field35_0x98;
 	field36_0x9c = frame->field36_0x9c;
-	frame_callbacks = ConvertUIInteractionCallbacks(frame->frame_callbacks);
 	field40_0xb8 = frame->field40_0xb8;
 	field41_0xbc = frame->field41_0xbc;
 	field42_0xc0 = frame->field42_0xc0;
@@ -126,7 +160,7 @@ void UIFrame::GetContext() {
 	relation.field67_0x124 = frame->relation.field67_0x124;
 	relation.field68_0x128 = frame->relation.field68_0x128;
 	relation.frame_hash_id = frame->relation.frame_hash_id;
-	//relation.siblings = GetSiblingFrameIDs(frame->relation);
+	relation.siblings = GetSiblingFrameIDs(frame->frame_id);
 
 	field73_0x13c = frame->field73_0x13c;
 	field74_0x140 = frame->field74_0x140;
@@ -156,7 +190,5 @@ void UIFrame::GetContext() {
 	field98_0x1a0 = frame->field98_0x1a0;
 	//TooltipInfo* tooltip_info;
 	field100_0x1a8 = frame->field100_0x1a8;
-	
-
 
 }

@@ -1016,6 +1016,7 @@ namespace GW {
         GWCA_API uint32_t GetHashByLabel(const std::string& label);
         GWCA_API std::vector<std::tuple<uint32_t, uint32_t, uint32_t, uint32_t>> GetFrameHierarchy();
         GWCA_API std::vector<std::pair<uint32_t, uint32_t>> GetFrameCoordsByHash(uint32_t frame_hash);
+		GWCA_API std::vector<uint32_t> GetFrameArray();
 
         GWCA_API bool SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam = nullptr);
 

@@ -9,6 +9,7 @@ namespace GW {
         void Unlink()
         {
             RemoveFromList();
+            RemoveFromList();
 
             next_node = reinterpret_cast<T*>(reinterpret_cast<size_t>(this) + 1);
             prev_link = this;
@@ -110,8 +111,13 @@ namespace GW {
             return iterator(last, &link);
         }
 
-        [[nodiscard]] iterator begin() const { return iterator(&link); }
-        [[nodiscard]] iterator end() const { return end(); }
+        //[[nodiscard]] iterator begin() const { return iterator(&link); }
+        [[nodiscard]] iterator begin() const { return iterator(const_cast<TLink<T>*>(&link), const_cast<TLink<T>*>(&link)); }
+        //[[nodiscard]] iterator end() const { return end(); }
+
+        [[nodiscard]] iterator end() const { return iterator(const_cast<TLink<T>*>(&link), const_cast<TLink<T>*>(&link)); }
+
+
 
         TLink<T>* Get() { return &link; }
 

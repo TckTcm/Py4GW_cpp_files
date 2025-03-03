@@ -1069,7 +1069,20 @@ namespace GW {
             return coords;
         }
 
+        std::vector<uint32_t> GetFrameArray() {
 
+            std::vector<uint32_t> frame_ids;
+            if (!s_FrameArray)
+                return frame_ids; // Return empty if frame array is invalid
+            for (uint32_t frame_id = 0; frame_id < s_FrameArray->size(); ++frame_id) {
+                auto frame = (*s_FrameArray)[frame_id];
+                if (!IsFrameValid(frame))
+                    continue; // Skip invalid frames
+                frame_ids.push_back(frame_id);
+            }
+            return frame_ids;
+
+        }
 
 
         Vec2f WindowPosition::xAxis(float multiplier, const bool clamp_position) const {

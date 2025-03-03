@@ -20,10 +20,6 @@ struct UIInteractionCallbackWrapper {
     uintptr_t get_address() const { return callback_address; }
 };
 
-
-
-
-
 struct FramePositionWrapper {
     uint32_t top;
     uint32_t left;
@@ -67,6 +63,9 @@ struct FrameRelationWrapper {
 
 class UIFrame {
 public:
+    bool is_created;
+    bool is_visible;
+
 	uint32_t frame_id;
 	uint32_t parent_id;
 	uint32_t frame_hash;
@@ -108,6 +107,7 @@ public:
     uint32_t field35_0x98;
     uint32_t field36_0x9c;
     std::vector<UIInteractionCallbackWrapper> frame_callbacks;
+    uint32_t child_offset_id;
     uint32_t field40_0xb8;
     uint32_t field41_0xbc;
     uint32_t field42_0xc0;
@@ -157,6 +157,8 @@ public:
 
 class UIManager {
 public:
+
+
     static uint32_t GetFrameIDByLabel(const std::string& label) {
         std::wstring wlabel(label.begin(), label.end()); // Convert to wide string
         return GW::UI::GetFrameIDByLabel(wlabel.c_str());
@@ -178,10 +180,40 @@ public:
         return GW::UI::GetFrameCoordsByHash(frame_hash);
     }
 
-    UIFrame GetFrame(uint32_t frame_id) {
-        return UIFrame(frame_id);
-    }
 
+	bool ButtonClick(uint32_t frame_id) {
+		GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
+		return GW::UI::ButtonClick(frame);
+	}
+
+	static uint32_t GetRootFrameID() {
+		GW::UI::Frame* frame = GW::UI::GetRootFrame();
+		if (!frame) {
+			return 0;
+		}
+		return frame->frame_id;
+	}
+
+	static bool IsWorldMapShowing() {
+		return GW::UI::GetIsWorldMapShowing();
+	}
+
+	bool SetPreference(uint32_t pref, uint32_t value) {
+		GW::UI::EnumPreference pref_enum = static_cast<GW::UI::EnumPreference>(pref);
+		return GW::UI::SetPreference(pref_enum, value);
+	}
+
+	static uint32_t GetFrameLimit() {
+		return GW::UI::GetFrameLimit();
+	}
+
+	bool SetFrameLimit(uint32_t value) {
+		return GW::UI::SetFrameLimit(value);
+	}
+
+	static std::vector <uint32_t> GetFrameArray() {
+		return GW::UI::GetFrameArray();
+	}
 };
 
 
@@ -235,6 +267,8 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
         .def_readwrite("template_type", &UIFrame::template_type)
         .def_readwrite("position", &UIFrame::position)
         .def_readwrite("relation", &UIFrame::relation)
+		.def_readwrite("is_created", &UIFrame::is_created)
+		.def_readwrite("is_visible", &UIFrame::is_visible)
 
         // Binding all fields explicitly
         .def_readwrite("field1_0x0", &UIFrame::field1_0x0)
@@ -272,6 +306,7 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
         .def_readwrite("field35_0x98", &UIFrame::field35_0x98)
         .def_readwrite("field36_0x9c", &UIFrame::field36_0x9c)
 		.def_readwrite("frame_callbacks", &UIFrame::frame_callbacks)
+		.def_readwrite("child_offset_id", &UIFrame::child_offset_id)
         .def_readwrite("field40_0xb8", &UIFrame::field40_0xb8)
         .def_readwrite("field41_0xbc", &UIFrame::field41_0xbc)
         .def_readwrite("field42_0xc0", &UIFrame::field42_0xc0)
@@ -321,6 +356,12 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
         .def_static("get_hash_by_label", &UIManager::GetHashByLabel, py::arg("label"), "Gets the hash of a frame label.")
         .def_static("get_frame_hierarchy", &UIManager::GetFrameHierarchy, "Retrieves the hierarchy of frames as a list of tuples (parent, child, etc.).")
         .def_static("get_frame_coords_by_hash", &UIManager::GetFrameCoordsByHash, py::arg("frame_hash"), "Gets the coordinates of a frame using its hash.")
-        .def("get_frame", &UIManager::GetFrame, py::arg("frame_id"), "Retrieves a UIFrame instance by its ID.");
+		.def("button_click", &UIManager::ButtonClick, py::arg("frame_id"), "Simulates a button click on a frame.")
+		.def("get_root_frame_id", &UIManager::GetRootFrameID, "Gets the ID of the root frame.")
+		.def("is_world_map_showing", &UIManager::IsWorldMapShowing, "Checks if the world map is currently showing.")
+		.def("set_preference", &UIManager::SetPreference, py::arg("pref"), py::arg("value"), "Sets a UI preference.")
+		.def("get_frame_limit", &UIManager::GetFrameLimit, "Gets the frame limit.")
+		.def("set_frame_limit", &UIManager::SetFrameLimit, py::arg("value"), "Sets the frame limit.")
+		.def_static("get_frame_array", &UIManager::GetFrameArray, "Gets the frame array.");
 
 }
