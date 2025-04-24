@@ -152,6 +152,41 @@ public:
 
     int casting_skill_id = 0;
     float overcast = 0;
+
+
+    // extra fields added for completion
+
+	uint32_t h00C8 = 0;
+	uint32_t h00CC = 0;
+	uint32_t h00D0 = 0;
+	std::vector<uint32_t> h00D4;
+	float animation_type = 0;
+	std::vector<uint32_t> h00E4;
+	float weapon_attack_speed = 0;
+	float attack_speed_modifier = 0;
+	uint32_t agent_model_type = 0;
+	uint32_t transmog_npc_id = 0;
+    uint32_t h0100 = 0;
+	uint32_t guild_id = 0;
+	uint32_t team_id = 0;
+	uint32_t h0108 = 0;
+    std::vector<uint32_t> h010E;
+	uint32_t h0110 = 0;
+    uint32_t h0124 = 0;
+    uint32_t h012C = 0;
+    uint32_t effects = 0;
+    int32_t h013C = 0;
+    std::vector<uint32_t> h0141;
+    uint32_t model_state = 0;
+	uint32_t type_map = 0;
+    std::vector<uint32_t> h015C;
+    uint32_t h017C = 0;
+    float animation_speed = 0;
+    uint32_t animation_code = 0;
+    uint32_t animation_id = 0;
+    std::vector<uint32_t> h0190;
+    uint16_t  h01B6 = 0;
+
 public:
     PyLivingAgent(int agent_id);
     void GetContext();
@@ -248,9 +283,38 @@ public:
     PyGadgetAgent gadget_agent = 0;
     std::vector<AttributeClass> attributes;
 
+	uint32_t h0004 = 0;
+	uint32_t h0008 = 0;
+	std::vector<uint32_t> h000C;
+	uint32_t instance_timer_in_frames = 0;
+	uint32_t timer2 = 0;
+	float model_width1 = 0;
+	float model_height1 = 0;
+	float model_width2 = 0;
+	float model_height2 = 0;
+	float model_width3 = 0;
+	float model_height3 = 0;
+	uint32_t name_properties = 0;
+	uint32_t ground = 0;
+	uint32_t h0060 = 0;
+    std::vector<uint32_t> terrain_normal;
+	std::vector<uint32_t> h0070;
+	float name_tag_x = 0;
+	float name_tag_y = 0;
+	float name_tag_z = 0;
+	uint32_t visual_effects = 0;
+    uint32_t h0092;
+	std::vector<uint32_t> h0094;
+    uint32_t _type;
+    std::vector<uint32_t> h00B4;
+	uint32_t instance_timer = 0;
+	uint32_t rand1 = 0;
+	uint32_t rand2 = 0;
+
     PyAgent(int agent_id);  // Updated constructor
     void Set(int agent_id);
     void GetContext();  // Updated method to take agent_id as a parameter
 	bool IsValid(int agent_id);
+
 };
 

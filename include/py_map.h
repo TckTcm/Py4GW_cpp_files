@@ -189,13 +189,43 @@ public:
     CampaignWrapper campaign = 0; // GW::Constants::Campaign::Core;
     Continent continent = 6; // GW::Continent::DevContinent;
     RegionType region_type = 20; // GW::RegionType::Unknown;
-    uint32_t max_party_size = 0;
     bool has_enter_button = false;
     bool is_on_world_map = false;
     bool is_pvp = false;
     bool is_guild_hall = false;
     bool is_vanquishable_area = false;
     int amount_of_players_in_instance = 0;
+
+    //more fields for map AreaInfo
+	uint32_t flags = 0;
+	uint32_t thumbnail_id = 0;
+	uint32_t min_party_size = 0;
+	uint32_t max_party_size = 0;
+	uint32_t min_player_size = 0;
+	uint32_t max_player_size = 0;
+	uint32_t controlled_outpost_id = 0;
+	uint32_t fraction_mission = 0;
+	uint32_t min_level = 0;
+	uint32_t max_level = 0;
+	uint32_t needed_pq = 0;
+	uint32_t mission_maps_to = 0;
+	uint32_t icon_position_x = 0;
+	uint32_t icon_position_y = 0;
+	uint32_t icon_start_x = 0;
+	uint32_t icon_start_y = 0;
+	uint32_t icon_end_x = 0;
+	uint32_t icon_end_y = 0;
+	uint32_t icon_start_x_dupe = 0;
+	uint32_t icon_start_y_dupe = 0;
+	uint32_t icon_end_x_dupe = 0;
+	uint32_t icon_end_y_dupe = 0;
+	uint32_t file_id = 0;
+    uint32_t mission_chronology = 0;
+    uint32_t ha_map_chronology = 0;
+    uint32_t name_id = 0;
+    uint32_t description_id = 0;
+
+	std::vector<float> map_boundaries = { 0, 0, 0, 0, 0 };
 
     PyMap();
     void GetContext();
@@ -213,6 +243,35 @@ public:
     bool CancelEnterChallenge();
 };
 
+
+
+class PyMissionMap {
+public:
+    bool window_open = false;
+    uint32_t frame_id = 0;
+    float left = 0;
+    float top = 0;
+    float right = 0;
+    float bottom = 0;
+    float scale_x = 0;
+    float scale_y = 0;
+    float zoom = 0;
+    float center_x = 0;
+    float center_y = 0;
+    float last_click_x = 0;
+    float last_click_y = 0;
+    float pan_offset_x = 0;
+    float pan_offset_y = 0;
+    float mission_map_screen_center_x = 0;
+    float mission_map_screen_center_y = 0;
+
+
+
+    PyMissionMap() { GetContext(); }
+    void GetContext();
+    
+
+};
 
 
 

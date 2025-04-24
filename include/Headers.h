@@ -34,6 +34,7 @@ enum combatState { cIdle, cInCastingRoutine };
 
 // DirectX headers
 #include <d3d9.h>
+#include <d3dx9.h>
 
 // ImGui headers
 #include "imgui.h"
@@ -303,13 +304,13 @@ inline WindowFlags operator&(WindowFlags lhs, WindowFlags rhs) {
 }
 
 enum class SafeServerRegion {
-    International,
-    America,
+    International = -2,
+    America = 0,
     Korea,
     Europe,
     China,
     Japan,
-    Unknown
+    Unknown = 255
 };
 
 enum class SafeLanguage {
@@ -320,11 +321,11 @@ enum class SafeLanguage {
     Italian,
     Spanish,
     TraditionalChinese,
-    Japanese,
+    Japanese =8,
     Polish,
     Russian,
-    BorkBorkBork,
-    Unknown
+    BorkBorkBork =17,
+    Unknown =255
 };
 
 
@@ -628,6 +629,7 @@ enum class HeroType {
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/PreGameContext.h>
 #include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/GameEntities/Attribute.h>
@@ -637,6 +639,7 @@ enum class HeroType {
 
 #include <GWCA/Managers/UIMgr.h>
 
+#include <GWCA/Context/AgentContext.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 
@@ -661,6 +664,7 @@ enum class HeroType {
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Context/MapContext.h>
+#include <GWCA/Context/GameplayContext.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/GameEntities/Item.h>
@@ -813,6 +817,8 @@ extern std::string global_item_name;
 extern bool item_name_ready;
 
 extern bool show_console;
+
+extern IDirect3DDevice9* g_d3d_device;
 
 
 

@@ -858,26 +858,49 @@ void PyMap::GetContext() {
         campaign = static_cast<int>(info->campaign);
         continent = static_cast<int>(info->continent);
         region_type = static_cast<int>(info->type);
-        max_party_size = info->max_party_size;
         has_enter_button = info->GetHasEnterButton();
         is_on_world_map = info->GetIsOnWorldMap();
         is_pvp = info->GetIsPvP();
         is_guild_hall = info->GetIsGuildHall();
         is_vanquishable_area = info->GetIsVanquishableArea();
-    }
-    else {
-        campaign = 0; // GW::Constants::Campaign::Core;
-        continent = 6; // GW::Continent::DevContinent;
-        region_type = 20; // GW::RegionType::Unknown;
-        max_party_size = 0;
-        has_enter_button = false;
-        is_on_world_map = false;
-        is_pvp = false;
-        is_guild_hall = false;
-        is_vanquishable_area = false;
+        //added for map handling
+		flags = info->flags;
+		thumbnail_id = info->thumbnail_id;
+		min_party_size = info->min_party_size;
+		max_party_size = info->max_party_size;
+		min_player_size = info->min_player_size;
+		max_player_size = info->max_player_size;
+		controlled_outpost_id = info->controlled_outpost_id;
+		fraction_mission = info->fraction_mission;
+		min_level = info->min_level;
+		max_level = info->max_level;
+		needed_pq = info->needed_pq;
+		mission_maps_to = info->mission_maps_to;
+		icon_position_x = info->x;
+		icon_position_y = info->y;
+		icon_start_x = info->icon_start_x;
+		icon_start_y = info->icon_start_y;
+		icon_end_x = info->icon_end_x;
+		icon_end_y = info->icon_end_y;
+		icon_start_x_dupe = info->icon_start_x_dupe;
+		icon_start_y_dupe = info->icon_start_y_dupe;
+		icon_end_x_dupe = info->icon_end_x_dupe;
+		icon_end_y_dupe = info->icon_end_y_dupe;
+		file_id = info->file_id;
+		mission_chronology = info->mission_chronology;
+		ha_map_chronology = info->ha_map_chronology;
+		name_id = info->name_id;
+		description_id = info->description_id;
     }
 
     amount_of_players_in_instance = static_cast<int>(GW::Agents::GetAmountOfPlayersInInstance());
+
+    const auto current_map_context = GW::GetMapContext();
+    if (current_map_context)
+        map_boundaries.assign(current_map_context->map_boundaries, current_map_context->map_boundaries + 5);
+
+
+
 }
 
 bool PyMap::Travel(int new_map_id) {
@@ -1151,13 +1174,40 @@ PYBIND11_EMBEDDED_MODULE(PyMap, m) {
         .def_readonly("campaign", &PyMap::campaign)
         .def_readonly("continent", &PyMap::continent)
         .def_readonly("region_type", &PyMap::region_type)
-        .def_readonly("max_party_size", &PyMap::max_party_size)
         .def_readonly("has_enter_button", &PyMap::has_enter_button)
         .def_readonly("is_on_world_map", &PyMap::is_on_world_map)
         .def_readonly("is_pvp", &PyMap::is_pvp)
         .def_readonly("is_guild_hall", &PyMap::is_guild_hall)
         .def_readonly("is_vanquishable_area", &PyMap::is_vanquishable_area)
         .def_readonly("amount_of_players_in_instance", &PyMap::amount_of_players_in_instance)
+		.def_readonly("flags", &PyMap::flags)
+		.def_readonly("thumbnail_id", &PyMap::thumbnail_id)
+		.def_readonly("min_party_size", &PyMap::min_party_size)
+		.def_readonly("max_party_size", &PyMap::max_party_size)
+		.def_readonly("min_player_size", &PyMap::min_player_size)
+		.def_readonly("max_player_size", &PyMap::max_player_size)
+		.def_readonly("controlled_outpost_id", &PyMap::controlled_outpost_id)
+		.def_readonly("fraction_mission", &PyMap::fraction_mission)
+		.def_readonly("min_level", &PyMap::min_level)
+		.def_readonly("max_level", &PyMap::max_level)
+		.def_readonly("needed_pq", &PyMap::needed_pq)
+		.def_readonly("mission_maps_to", &PyMap::mission_maps_to)
+		.def_readonly("icon_position_x", &PyMap::icon_position_x)
+		.def_readonly("icon_position_y", &PyMap::icon_position_y)
+		.def_readonly("icon_start_x", &PyMap::icon_start_x)
+		.def_readonly("icon_start_y", &PyMap::icon_start_y)
+		.def_readonly("icon_end_x", &PyMap::icon_end_x)
+		.def_readonly("icon_end_y", &PyMap::icon_end_y)
+		.def_readonly("icon_start_x_dupe", &PyMap::icon_start_x_dupe)
+		.def_readonly("icon_start_y_dupe", &PyMap::icon_start_y_dupe)
+		.def_readonly("icon_end_x_dupe", &PyMap::icon_end_x_dupe)
+		.def_readonly("icon_end_y_dupe", &PyMap::icon_end_y_dupe)
+		.def_readonly("file_id", &PyMap::file_id)
+		.def_readonly("mission_chronology", &PyMap::mission_chronology)
+		.def_readonly("ha_map_chronology", &PyMap::ha_map_chronology)
+		.def_readonly("name_id", &PyMap::name_id)
+		.def_readonly("description_id", &PyMap::description_id)
+		.def_readonly("map_boundaries", &PyMap::map_boundaries)  // Expose the map_boundaries vector
 
         // Expose the constructor
         .def(py::init<>())
@@ -1359,10 +1409,12 @@ struct SkillbarSkill {
     int adrenaline_b;   // Adrenaline (part B)
     int recharge;       // Recharge time
     int event;          // Event associated with the skill
+	uint32_t get_recharge; // Get recharge time
 
     // Constructor to initialize the SkillbarSkill
-    SkillbarSkill(SkillID id, int adrenaline_a = 0, int adrenaline_b = 0, int recharge = 0, int event = 0)
-        : ID(id), adrenaline_a(adrenaline_a), adrenaline_b(adrenaline_b), recharge(recharge), event(event) {}
+    SkillbarSkill(SkillID id, int adrenaline_a = 0, int adrenaline_b = 0, int recharge = 0, int event = 0, uint32_t get_recharge = 0)
+        : ID(id), adrenaline_a(adrenaline_a), adrenaline_b(adrenaline_b), recharge(recharge), event(event), get_recharge(get_recharge)
+    {}
 };
 
 class Skillbar {
@@ -1371,6 +1423,7 @@ public:
     uint32_t agent_id = 0;
     uint32_t disabled = 0;
     uint32_t casting = 0;
+
 
     Skillbar() {
         GetContext();
@@ -1391,7 +1444,8 @@ public:
             int adrenaline_b = player_skillbar->skills[i].adrenaline_b;
             int recharge = player_skillbar->skills[i].recharge;
             int event = player_skillbar->skills[i].event;
-            skills.emplace_back(SkillbarSkill(skill_id, adrenaline_a, adrenaline_b, recharge, event));
+			int get_recharge = player_skillbar->skills[i].GetRecharge();
+            skills.emplace_back(SkillbarSkill(skill_id, adrenaline_a, adrenaline_b, recharge, event, get_recharge));
 
         }
     }
@@ -1587,17 +1641,19 @@ void bind_Skill(py::module_& m) {
 
 void bind_SkillbarSkill(py::module_& m) {
     py::class_<SkillbarSkill>(m, "SkillbarSkill")
-        .def(py::init<SkillID, int, int, int, int>(),
+        .def(py::init<SkillID, int, int, int, int, int>(),
             py::arg("id"),
             py::arg("adrenaline_a") = 0,
             py::arg("adrenaline_b") = 0,
             py::arg("recharge") = 0,
-            py::arg("event") = 0)  // Constructor with default values
+            py::arg("event") = 0,  // Constructor with default values
+		    py::arg("get_recharge") = 0)  // Constructor with default values
         .def_readonly("id", &SkillbarSkill::ID)
         .def_readonly("adrenaline_a", &SkillbarSkill::adrenaline_a)
         .def_readonly("adrenaline_b", &SkillbarSkill::adrenaline_b)
         .def_readonly("recharge", &SkillbarSkill::recharge)
-        .def_readonly("event", &SkillbarSkill::event);
+        .def_readonly("event", &SkillbarSkill::event)
+		.def_readonly("get_recharge", &SkillbarSkill::get_recharge);  // Read-only property
 }
 
 void bind_Skillbar(py::module_& m) {
@@ -1629,4 +1685,72 @@ PYBIND11_EMBEDDED_MODULE(PySkill, m) {
 PYBIND11_EMBEDDED_MODULE(PySkillbar, m) {
     bind_SkillbarSkill(m);
     bind_Skillbar(m);
+}
+
+
+void PyMissionMap::GetContext() {
+    const auto gameplay_context = GW::GetGameplayContext();
+    const auto mission_map_context = GW::Map::GetMissionMapContext();
+    const auto mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
+    if (!(mission_map_frame && mission_map_frame->IsVisible())) {
+        window_open = false;
+        return;
+    }
+
+    window_open = true;
+    frame_id = mission_map_context->frame_id;
+
+    const auto root = GW::UI::GetRootFrame();
+    auto mission_map_top_left = mission_map_frame->position.GetContentTopLeft(root);
+    left = mission_map_top_left.x;
+    top = mission_map_top_left.y;
+    auto mission_map_bottom_right = mission_map_frame->position.GetContentBottomRight(root);
+    right = mission_map_bottom_right.x;
+    bottom = mission_map_bottom_right.y;
+    auto mission_map_scale = mission_map_frame->position.GetViewportScale(root);
+    scale_x = mission_map_scale.x;
+    scale_y = mission_map_scale.y;
+    zoom = gameplay_context->mission_map_zoom;
+    auto mission_map_center_pos = mission_map_context->player_mission_map_pos;
+    center_x = mission_map_center_pos.x;
+    center_y = mission_map_center_pos.y;
+    auto mission_map_last_click_location = mission_map_context->last_mouse_location;
+    last_click_x = mission_map_last_click_location.x;
+    last_click_y = mission_map_last_click_location.y;
+    auto current_pan_offset = mission_map_context->h003c->mission_map_pan_offset;
+    pan_offset_x = current_pan_offset.x;
+    pan_offset_y = current_pan_offset.y;
+    //mission_map_screen_pos = GetMissionMapScreenCenterPos();
+    mission_map_screen_center_x = mission_map_top_left.x + (mission_map_bottom_right.x - mission_map_top_left.x) / 2.0f;
+    mission_map_screen_center_y = mission_map_top_left.y + (mission_map_bottom_right.y - mission_map_top_left.y) / 2.0f;
+}
+
+
+
+void bind_PyMissionMap(py::module_& m) {
+	py::class_<PyMissionMap>(m, "PyMissionMap")
+		.def(py::init<>())  // Default constructor
+		.def("GetContext", &PyMissionMap::GetContext)  // Method to populate context
+		.def_readonly("window_open", &PyMissionMap::window_open)  // Read-only property
+		.def_readonly("frame_id", &PyMissionMap::frame_id)  // Read-only property
+		.def_readonly("left", &PyMissionMap::left)  // Read-only property
+		.def_readonly("top", &PyMissionMap::top)  // Read-only property
+		.def_readonly("right", &PyMissionMap::right)  // Read-only property
+		.def_readonly("bottom", &PyMissionMap::bottom)  // Read-only property
+		.def_readonly("scale_x", &PyMissionMap::scale_x)  // Read-only property
+		.def_readonly("scale_y", &PyMissionMap::scale_y)  // Read-only property
+		.def_readonly("zoom", &PyMissionMap::zoom)  // Read-only property
+		.def_readonly("center_x", &PyMissionMap::center_x)  // Read-only property
+		.def_readonly("center_y", &PyMissionMap::center_y)  // Read-only property
+		.def_readonly("last_click_x", &PyMissionMap::last_click_x)  // Read-only property
+		.def_readonly("last_click_y", &PyMissionMap::last_click_y)  // Read-only property
+		.def_readonly("pan_offset_x", &PyMissionMap::pan_offset_x)  // Read-only property
+		.def_readonly("pan_offset_y", &PyMissionMap::pan_offset_y)  // Read-only property
+	    .def_readonly("mission_map_screen_center_x", &PyMissionMap::mission_map_screen_center_x)  // Read-only property
+		.def_readonly("mission_map_screen_center_y", &PyMissionMap::mission_map_screen_center_y);  // Read-only property
+}
+
+
+PYBIND11_EMBEDDED_MODULE(PyMissionMap, m) {
+    bind_PyMissionMap(m);
 }

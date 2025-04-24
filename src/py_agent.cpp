@@ -205,11 +205,9 @@ std::string Weapon::GetName() const {
     }
 }
 
-
 PyLivingAgent::PyLivingAgent(int agent_id) : agent_id(agent_id) {
     GetContext();
 }
-
 
 void PyLivingAgent::GetContext() {
     if (!agent_id) return;
@@ -232,26 +230,6 @@ void PyLivingAgent::GetContext() {
     max_hp = living->max_hp;
     hp_regen = living->hp_pips;
     login_number = living->login_number;
-
-    /*
-    if (login_number) {
-        wchar_t* p_name = GW::Agents::GetPlayerNameByLoginNumber(login_number);
-        std::wstring wide_name(p_name);
-        name = std::string(wide_name.begin(), wide_name.end());
-    }
-    
-    else {
-		name = "";
-        std::wstring wide_name;
-		GW::Agents::AsyncGetAgentName(temp_agent, wide_name);
-        if (!wide_name.empty()) {
-            char buffer[512];
-            const std::string agent_name_str = local_WStringToString(wide_name);
-			name = agent_name_str;
-        }
-
-    }
-    */
 
     dagger_status = living->dagger_status;
     allegiance = Allegiance(static_cast<int>(living->allegiance));
@@ -291,6 +269,38 @@ void PyLivingAgent::GetContext() {
     is_npc = living->IsNPC();
     casting_skill_id = living->skill;
     overcast = living->h0118;
+
+	h00C8 = living->h00C8;
+	h00CC = living->h00CC;
+	h00D0 = living->h00D0;
+    for (int i = 0; i < 3; ++i) { h00D4.push_back(living->h00D4[i]); }
+	animation_type = living->animation_type;
+	for (int i = 0; i < 2; ++i) { h00E4.push_back(living->h00E4[i]); }
+	weapon_attack_speed = living->weapon_attack_speed;
+	attack_speed_modifier = living->attack_speed_modifier;
+	agent_model_type = living->agent_model_type;
+	transmog_npc_id = living->transmog_npc_id;
+	auto tags = living->tags;
+    if (tags) { guild_id = tags->guild_id; }
+	h0108 = living->h0108;
+	team_id = living->team_id;
+	for (int i = 0; i < 2; ++i) { h010E.push_back(living->h010E[i]); }
+	h0110 = living->h0110;
+	h0124 = living->h0124;
+	h012C = living->h012C;
+	effects = living->effects;
+    h013C = living->h013C;
+    for (int i = 0; i < 19; ++i) { h0141.push_back(living->h0141[i]); }
+	model_state = living->model_state;
+	type_map = living->type_map;
+	for (int i = 0; i < 4; ++i) { h015C.push_back(living->h015C[i]); }
+	h017C = living->h017C;
+	animation_speed = living->animation_speed;
+	animation_code = living->animation_code;
+	animation_id = living->animation_id;
+	for (int i = 0; i < 32; ++i) { h0190.push_back(living->h0190[i]); }
+	h01B6 = living->h01B6;
+
 }
 
 std::string global_agent_name;
@@ -608,13 +618,41 @@ void PyAgent::GetContext() {
             }
         }
     }
+	h0004 = agent->h0004;
+	h0008 = agent->h0008;
+	for (int i = 0; i < 2; ++i) { h000C.push_back(agent->h000C[i]); }
+	instance_timer_in_frames = agent->timer;
+	timer2 = agent->timer2;
+	model_width1 = agent->width1;
+	model_height1 = agent->height1;
+	model_width2 = agent->width2;
+	model_height2 = agent->height2;
+	model_width3 = agent->width3;
+	model_height3 = agent->height3;
+	name_properties = agent->name_properties;
+	ground = agent->ground;
+	h0060 = agent->h0060;
+	terrain_normal.push_back(agent->terrain_normal.x);
+	terrain_normal.push_back(agent->terrain_normal.y);
+	terrain_normal.push_back(agent->terrain_normal.z);
+	for (int i = 0; i < 4; ++i) { h0070.push_back(agent->h0070[i]); }
+	name_tag_x = agent->name_tag_x;
+	name_tag_y = agent->name_tag_y;
+	name_tag_z = agent->name_tag_z;
+	visual_effects = agent->visual_effects;
+	h0092 = agent->h0092;
+	for (int i = 0; i < 2; ++i) { h0094.push_back(agent->h0094[i]); }
+	_type = agent->type;
+	for (int i = 0; i < 4; ++i) { h00B4.push_back(agent->h00B4[i]); } 
 
-    /*
-	Overlay ovrly = Overlay();
-	Point2D screen_coords = ovrly.WorldToScreen(x, y, z);
-	screen_x = screen_coords.x;
-	screen_y = screen_coords.y;
-    */
+    GW::AgentContext* ctx = GW::GetAgentContext();
+    if (ctx) {
+        rand1 = ctx->rand1;
+        rand2 = ctx->rand2;
+        instance_timer = ctx->instance_timer;
+    }
+
+    
 }
 
 bool PyAgent::IsValid(int agent_id) {
@@ -622,6 +660,38 @@ bool PyAgent::IsValid(int agent_id) {
     GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (!agent) return false;
     return true;
+}
+
+std::vector<PyAgent> GetRawAgentArray() {
+    std::vector<PyAgent> agent_ids = {};
+
+    const auto agents = GW::Agents::GetAgentArray();
+    if (!agents) return agent_ids;
+
+    for (const GW::Agent* agent : *agents) {
+        if (agent && agent->agent_id) {
+			auto py_agent = PyAgent(agent->agent_id);
+            agent_ids.push_back(py_agent);
+        }
+    }
+    return agent_ids;
+}
+
+std::vector<std::pair<int, int>> GetMovementStuckArray() {
+	std::vector<std::pair<int, int>> movement_stuck_array = {};
+    GW::AgentContext* ctx = GW::GetAgentContext();
+    if (ctx) {
+        for (uint32_t i = 0; i < ctx->agent_movement.size(); ++i) {
+            GW::AgentMovement* movement = ctx->agent_movement[i];
+            if (!movement) continue;
+            uint32_t agent_id = movement->agent_id;
+            uint32_t movement_stuck = movement->moving1;
+			movement_stuck_array.push_back(std::make_pair(agent_id, movement_stuck));
+
+        }
+
+    }
+	return movement_stuck_array;
 }
 
 
@@ -846,6 +916,38 @@ void bind_PyLivingAgent(py::module_& m) {
         .def_readonly("is_npc", &PyLivingAgent::is_npc)
         .def_readonly("casting_skill_id", &PyLivingAgent::casting_skill_id)
         .def_readonly("overcast", &PyLivingAgent::overcast)
+
+		.def_readonly("h00C8", &PyLivingAgent::h00C8)
+		.def_readonly("h00CC", &PyLivingAgent::h00CC)
+		.def_readonly("h00D0", &PyLivingAgent::h00D0)
+		.def_readonly("h00D4", &PyLivingAgent::h00D4)
+		.def_readonly("animation_type", &PyLivingAgent::animation_type)
+		.def_readonly("h00E4", &PyLivingAgent::h00E4)
+		.def_readonly("weapon_attack_speed", &PyLivingAgent::weapon_attack_speed)
+		.def_readonly("attack_speed_modifier", &PyLivingAgent::attack_speed_modifier)
+		.def_readonly("agent_model_type", &PyLivingAgent::agent_model_type)
+		.def_readonly("transmog_npc_id", &PyLivingAgent::transmog_npc_id)
+		.def_readonly("h0100", &PyLivingAgent::h0100)
+		.def_readonly("guild_id", &PyLivingAgent::guild_id)
+		.def_readonly("team_id", &PyLivingAgent::team_id)
+		.def_readonly("h0108", &PyLivingAgent::h0108)
+		.def_readonly("h010E", &PyLivingAgent::h010E)
+		.def_readonly("h0110", &PyLivingAgent::h0110)
+		.def_readonly("h0124", &PyLivingAgent::h0124)
+		.def_readonly("h012C", &PyLivingAgent::h012C)
+		.def_readonly("effects", &PyLivingAgent::effects)
+		.def_readonly("h013C", &PyLivingAgent::h013C)
+		.def_readonly("h0141", &PyLivingAgent::h0141)
+		.def_readonly("model_state", &PyLivingAgent::model_state)
+		.def_readonly("type_map", &PyLivingAgent::type_map)
+		.def_readonly("h015C", &PyLivingAgent::h015C)
+		.def_readonly("h017C", &PyLivingAgent::h017C)
+		.def_readonly("animation_speed", &PyLivingAgent::animation_speed)
+		.def_readonly("animation_code", &PyLivingAgent::animation_code)
+		.def_readonly("animation_id", &PyLivingAgent::animation_id)
+		.def_readonly("h0190", &PyLivingAgent::h0190)
+		.def_readonly("h01B6", &PyLivingAgent::h01B6)
+
         .def("GetName", &PyLivingAgent::GetName)
         .def("RequestName", &PyLivingAgent::RequestName)
         .def("IsAgentNameReady", &PyLivingAgent::IsAgentNameReady);
@@ -883,14 +985,14 @@ void bind_PyAgent(py::module_& m) {
         .def(py::init<int>())  // Constructor with agent_id
         .def("Set", &PyAgent::Set)  // Set method to update agent_id and context
         .def("GetContext", &PyAgent::GetContext)  // Method to refresh the context
-		.def("IsValid", &PyAgent::IsValid)  // Method to check if the agent is valid
+        .def("IsValid", &PyAgent::IsValid)  // Method to check if the agent is valid
         .def_readonly("id", &PyAgent::id)  // Access to the id field
         .def_readonly("x", &PyAgent::x)  // Access to the x field
         .def_readonly("y", &PyAgent::y)  // Access to the y field
         .def_readonly("z", &PyAgent::z)  // Access to the z field
         .def_readonly("zplane", &PyAgent::zplane)  // Access to the zplane field
-		.def_readonly("screen_x", &PyAgent::screen_x)  // Access to the screen_x field
-		.def_readonly("screen_y", &PyAgent::screen_y)  // Access to the screen_y field
+        .def_readonly("screen_x", &PyAgent::screen_x)  // Access to the screen_x field
+        .def_readonly("screen_y", &PyAgent::screen_y)  // Access to the screen_y field
         .def_readonly("rotation_angle", &PyAgent::rotation_angle)  // Access to the rotation_angle field
         .def_readonly("rotation_cos", &PyAgent::rotation_cos)  // Access to the rotation_cos field
         .def_readonly("rotation_sin", &PyAgent::rotation_sin)  // Access to the rotation_sin field
@@ -902,7 +1004,39 @@ void bind_PyAgent(py::module_& m) {
         .def_readonly("living_agent", &PyAgent::living_agent)  // Access to the living_agent object
         .def_readonly("item_agent", &PyAgent::item_agent)  // Access to the item_agent object
         .def_readonly("gadget_agent", &PyAgent::gadget_agent)  // Access to the gadget_agent object
-        .def_readonly("attributes", &PyAgent::attributes);  // Access to the attributes object
+        .def_readonly("attributes", &PyAgent::attributes)  // Access to the attributes object
+        
+		.def_readonly("h0004", &PyAgent::h0004)  // Access to the h0004 field
+		.def_readonly("h0008", &PyAgent::h0008)  // Access to the h0008 field
+		.def_readonly("h000C", &PyAgent::h000C)  // Access to the h000C field
+		.def_readonly("instance_timer_in_frames", &PyAgent::instance_timer_in_frames)  // Access to the instance_timer_in_frames field
+		.def_readonly("timer2", &PyAgent::timer2)  // Access to the timer2 field
+		.def_readonly("model_width1", &PyAgent::model_width1)  // Access to the model_width1 field
+		.def_readonly("model_height1", &PyAgent::model_height1)  // Access to the model_height1 field
+		.def_readonly("model_width2", &PyAgent::model_width2)  // Access to the model_width2 field
+		.def_readonly("model_height2", &PyAgent::model_height2)  // Access to the model_height2 field
+		.def_readonly("model_width3", &PyAgent::model_width3)  // Access to the model_width3 field
+		.def_readonly("model_height3", &PyAgent::model_height3)  // Access to the model_height3 field
+		.def_readonly("name_properties", &PyAgent::name_properties)  // Access to the name_properties field
+		.def_readonly("ground", &PyAgent::ground)  // Access to the ground field
+		.def_readonly("h0060", &PyAgent::h0060)  // Access to the h0060 field
+		.def_readonly("terrain_normal", &PyAgent::terrain_normal)  // Access to the terrain_normal field
+		.def_readonly("h0070", &PyAgent::h0070)  // Access to the h0070 field
+		.def_readonly("name_tag_x", &PyAgent::name_tag_x)  // Access to the name_tag_x field
+		.def_readonly("name_tag_y", &PyAgent::name_tag_y)  // Access to the name_tag_y field
+		.def_readonly("name_tag_z", &PyAgent::name_tag_z)  // Access to the name_tag_z field
+		.def_readonly("visual_effects", &PyAgent::visual_effects)  // Access to the visual_effects field
+		.def_readonly("h0092", &PyAgent::h0092)  // Access to the h0092 field
+		.def_readonly("h0094", &PyAgent::h0094)  // Access to the h0094 field
+		.def_readonly("_type", &PyAgent::_type)  // Access to the type field
+		.def_readonly("h00B4", &PyAgent::h00B4)  // Access to the h00B4 field
+		.def_readonly("instance_timer", &PyAgent::instance_timer)  // Access to the instance_timer field
+		.def_readonly("rand1", &PyAgent::rand1)  // Access to the rand1 field
+		.def_readonly("rand2", &PyAgent::rand2)  // Access to the rand2 field
+
+        .def_static("GetRawAgentArray", &GetRawAgentArray)  // Static method to get raw agent array
+	    .def_static("GetMovementStuckArray", &GetMovementStuckArray);  // Static method to get movement stuck array
+
 }
 
 

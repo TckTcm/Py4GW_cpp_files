@@ -1165,7 +1165,9 @@ bool console_open = true;
 
 bool check_login_screen = true;
 
-void Py4GW::Draw(IDirect3DDevice9*) {
+void Py4GW::Draw(IDirect3DDevice9* device) {
+    if (!g_d3d_device)
+        g_d3d_device = device;
 
 	bool is_map_loading = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
 

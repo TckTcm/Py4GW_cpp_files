@@ -204,13 +204,76 @@ public:
 		return GW::UI::GetIsWorldMapShowing();
 	}
 
-    static void SetPreference(uint32_t pref, uint32_t value) {
+    static std::vector<uint32_t> GetPreferenceOptions(uint32_t pref) {
+        GW::UI::EnumPreference pref_enum = static_cast<GW::UI::EnumPreference>(pref);
+
+        uint32_t* options_ptr = nullptr;
+        uint32_t count = GW::UI::GetPreferenceOptions(pref_enum, &options_ptr);
+
+        std::vector<uint32_t> result;
+        if (options_ptr && count > 0) {
+            result.assign(options_ptr, options_ptr + count);
+        }
+        return result;
+    }
+
+
+
+	static uint32_t GetEnumPreference(uint32_t pref) {
+		GW::UI::EnumPreference pref_enum = static_cast<GW::UI::EnumPreference>(pref);
+		return GW::UI::GetPreference(pref_enum);
+	}
+
+	static uint32_t GetIntPreference(uint32_t pref) {
+		GW::UI::NumberPreference pref_enum = static_cast<GW::UI::NumberPreference>(pref);
+		return GW::UI::GetPreference(pref_enum);
+	}
+
+	static std::string GetStringPreference(uint32_t pref) {
+		GW::UI::StringPreference pref_enum = static_cast<GW::UI::StringPreference>(pref);
+		wchar_t* str = GW::UI::GetPreference(pref_enum);
+		if (!str) {
+			return "";
+		}
+		std::wstring wstr(str);
+		std::string str_utf8(wstr.begin(), wstr.end());
+		return str_utf8;
+
+	}
+
+	static bool GetBoolPreference(uint32_t pref) {
+		GW::UI::FlagPreference pref_enum = static_cast<GW::UI::FlagPreference>(pref);
+		return GW::UI::GetPreference(pref_enum);
+	}
+
+    static void SetEnumPreference(uint32_t pref, uint32_t value) {
         GW::GameThread::Enqueue([pref, value]() {
             GW::UI::EnumPreference pref_enum = static_cast<GW::UI::EnumPreference>(pref);
             GW::UI::SetPreference(pref_enum, value);
-            });
+            });	
+	}
 
-		
+	static void SetIntPreference(uint32_t pref, uint32_t value) {
+		GW::GameThread::Enqueue([pref, value]() {
+			GW::UI::NumberPreference pref_enum = static_cast<GW::UI::NumberPreference>(pref);
+			GW::UI::SetPreference(pref_enum, value);
+			});
+	}
+
+	static void SetStringPreference(uint32_t pref, const std::string& value) {
+		GW::GameThread::Enqueue([pref, value]() {
+			GW::UI::StringPreference pref_enum = static_cast<GW::UI::StringPreference>(pref);
+			std::wstring wstr(value.begin(), value.end());
+			wchar_t* wstr_ptr = const_cast<wchar_t*>(wstr.c_str());
+			GW::UI::SetPreference(pref_enum, wstr_ptr);
+			});
+	}
+
+	static void SetBoolPreference(uint32_t pref, bool value) {
+		GW::GameThread::Enqueue([pref, value]() {
+			GW::UI::FlagPreference pref_enum = static_cast<GW::UI::FlagPreference>(pref);
+			GW::UI::SetPreference(pref_enum, value);
+			});
 	}
 
 	static uint32_t GetFrameLimit() {
@@ -226,6 +289,74 @@ public:
 
 	static std::vector <uint32_t> GetFrameArray() {
 		return GW::UI::GetFrameArray();
+	}
+
+	static void KeyDown(uint32_t key, uint32_t frame_id) {
+		GW::GameThread::Enqueue([key, frame_id]() {
+			GW::UI::ControlAction key_action = static_cast<GW::UI::ControlAction>(key);
+			GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
+			GW::UI::Keydown(key_action, frame);
+			});
+	}
+
+	static void KeyUp(uint32_t key, uint32_t frame_id) {
+		GW::GameThread::Enqueue([key, frame_id]() {
+			GW::UI::ControlAction key_action = static_cast<GW::UI::ControlAction>(key);
+			GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
+			GW::UI::Keyup(key_action, frame);
+			});
+	}
+
+	static void KeyPress(uint32_t key, uint32_t frame_id) {
+		GW::GameThread::Enqueue([key, frame_id]() {
+			GW::UI::ControlAction key_action = static_cast<GW::UI::ControlAction>(key);
+			GW::UI::Frame* frame = GW::UI::GetFrameById(frame_id);
+			GW::UI::Keypress(key_action, frame);
+			});
+	}
+
+    static std::vector<uintptr_t> GetWindowPosition(uint32_t window_id) {
+	    std::vector<uintptr_t> result;
+	    GW::UI::WindowPosition* position = GW::UI::GetWindowPosition(static_cast<GW::UI::WindowID>(window_id));
+	    if (position) {
+			result.push_back(position->p1.x);
+			result.push_back(position->p1.y);
+			result.push_back(position->p2.x);
+			result.push_back(position->p2.y);
+
+	    }
+	    return result;
+    }
+
+	static bool IsWindowVisible(uint32_t window_id) {
+        GW::UI::WindowPosition* position = GW::UI::GetWindowPosition(static_cast<GW::UI::WindowID>(window_id));
+		if (!position) {
+			return false;
+		}
+        return (position->state & 0x1) != 0;
+	}
+
+	static void SetWindowVisible(uint32_t window_id, bool is_visible) {
+		GW::GameThread::Enqueue([window_id, is_visible]() {
+			GW::UI::SetWindowVisible(static_cast<GW::UI::WindowID>(window_id), is_visible);
+			});
+	}
+
+	static void SetWindowPosition(uint32_t window_id, const std::vector<uintptr_t>& position) {
+		GW::GameThread::Enqueue([window_id, position]() {
+			if (position.size() < 4) return; // Ensure we have enough data
+			GW::UI::WindowPosition* win_pos = GW::UI::GetWindowPosition(static_cast<GW::UI::WindowID>(window_id));
+			if (!win_pos) return;
+			win_pos->p1.x = static_cast<float>(position[0]);
+			win_pos->p1.y = static_cast<float>(position[1]);
+			win_pos->p2.x = static_cast<float>(position[2]);
+			win_pos->p2.y = static_cast<float>(position[3]);
+			GW::UI::SetWindowPosition(static_cast<GW::UI::WindowID>(window_id), win_pos);
+			});
+	}
+
+	static bool IsShiftScreenShot() {
+		return GW::UI::GetIsShiftScreenShot();
 	}
 };
 
@@ -363,19 +494,36 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
         .def("get_context", &UIFrame::GetContext);
 
 
-    py::class_<UIManager>(m, "UIManager")
-        .def_static("get_frame_id_by_label", &UIManager::GetFrameIDByLabel, py::arg("label"), "Gets the frame ID associated with a given label.")
-        .def_static("get_frame_id_by_hash", &UIManager::GetFrameIDByHash, py::arg("hash"), "Gets the frame ID using its hash.")
-        .def_static("get_hash_by_label", &UIManager::GetHashByLabel, py::arg("label"), "Gets the hash of a frame label.")
-        .def_static("get_frame_hierarchy", &UIManager::GetFrameHierarchy, "Retrieves the hierarchy of frames as a list of tuples (parent, child, etc.).")
-        .def_static("get_frame_coords_by_hash", &UIManager::GetFrameCoordsByHash, py::arg("frame_hash"), "Gets the coordinates of a frame using its hash.")
-		.def_static("button_click", &UIManager::ButtonClick, py::arg("frame_id"), "Simulates a button click on a frame.")
-		.def_static("get_root_frame_id", &UIManager::GetRootFrameID, "Gets the ID of the root frame.")
-		.def_static("is_world_map_showing", &UIManager::IsWorldMapShowing, "Checks if the world map is currently showing.")
-		.def_static("set_preference", &UIManager::SetPreference, py::arg("pref"), py::arg("value"), "Sets a UI preference.")
-		.def_static("get_frame_limit", &UIManager::GetFrameLimit, "Gets the frame limit.")
-		.def_static("set_frame_limit", &UIManager::SetFrameLimit, py::arg("value"), "Sets the frame limit.")
-		.def_static("get_frame_array", &UIManager::GetFrameArray, "Gets the frame array.")
-		.def_static("get_child_frame_id", &UIManager::GetChildFrameID, py::arg("parent_hash"), py::arg("child_offsets"), "Gets the ID of a child frame using its parent hash and child offsets.");
+        py::class_<UIManager>(m, "UIManager")
+            .def_static("get_frame_id_by_label", &UIManager::GetFrameIDByLabel, py::arg("label"), "Gets the frame ID associated with a given label.")
+            .def_static("get_frame_id_by_hash", &UIManager::GetFrameIDByHash, py::arg("hash"), "Gets the frame ID using its hash.")
+            .def_static("get_hash_by_label", &UIManager::GetHashByLabel, py::arg("label"), "Gets the hash of a frame label.")
+            .def_static("get_frame_hierarchy", &UIManager::GetFrameHierarchy, "Retrieves the hierarchy of frames as a list of tuples (parent, child, etc.).")
+            .def_static("get_frame_coords_by_hash", &UIManager::GetFrameCoordsByHash, py::arg("frame_hash"), "Gets the coordinates of a frame using its hash.")
+            .def_static("get_preference_options", &UIManager::GetPreferenceOptions, py::arg("pref"), "Gets the available options for a given preference.")
+            .def_static("get_enum_preference", &UIManager::GetEnumPreference, py::arg("pref"), "Gets the value of an enum preference.")
+            .def_static("get_int_preference", &UIManager::GetIntPreference, py::arg("pref"), "Gets the value of an integer preference.")
+            .def_static("get_string_preference", &UIManager::GetStringPreference, py::arg("pref"), "Gets the value of a string preference.")
+            .def_static("get_bool_preference", &UIManager::GetBoolPreference, py::arg("pref"), "Gets the value of a boolean preference.")
+            .def_static("set_enum_preference", &UIManager::SetEnumPreference, py::arg("pref"), py::arg("value"), "Sets the value of an enum preference.")
+            .def_static("set_int_preference", &UIManager::SetIntPreference, py::arg("pref"), py::arg("value"), "Sets the value of an integer preference.")
+            .def_static("set_string_preference", &UIManager::SetStringPreference, py::arg("pref"), py::arg("value"), "Sets the value of a string preference.")
+            .def_static("set_bool_preference", &UIManager::SetBoolPreference, py::arg("pref"), py::arg("value"), "Sets the value of a boolean preference.")
+
+            .def_static("button_click", &UIManager::ButtonClick, py::arg("frame_id"), "Simulates a button click on a frame.")
+            .def_static("get_root_frame_id", &UIManager::GetRootFrameID, "Gets the ID of the root frame.")
+            .def_static("is_world_map_showing", &UIManager::IsWorldMapShowing, "Checks if the world map is currently showing.")
+            .def_static("get_frame_limit", &UIManager::GetFrameLimit, "Gets the frame limit.")
+            .def_static("set_frame_limit", &UIManager::SetFrameLimit, py::arg("value"), "Sets the frame limit.")
+            .def_static("get_frame_array", &UIManager::GetFrameArray, "Gets the frame array.")
+            .def_static("get_child_frame_id", &UIManager::GetChildFrameID, py::arg("parent_hash"), py::arg("child_offsets"), "Gets the ID of a child frame using its parent hash and child offsets.")
+            .def_static("key_down", &UIManager::KeyDown, py::arg("key"), py::arg("frame_id"), "Simulates a key down event on a frame.")
+            .def_static("key_up", &UIManager::KeyUp, py::arg("key"), py::arg("frame_id"), "Simulates a key up event on a frame.")
+            .def_static("key_press", &UIManager::KeyPress, py::arg("key"), py::arg("frame_id"), "Simulates a key press event on a frame.")
+            .def_static("get_window_position", &UIManager::GetWindowPosition, py::arg("window_id"), "Gets the position of a window.")
+            .def_static("is_window_visible", &UIManager::IsWindowVisible, py::arg("window_id"), "Checks if a window is visible.")
+            .def_static("set_window_visible", &UIManager::SetWindowVisible, py::arg("window_id"), py::arg("is_visible"), "Sets the visibility of a window.")
+            .def_static("set_window_position", &UIManager::SetWindowPosition, py::arg("window_id"), py::arg("position"), "Sets the position of a window.")
+            .def_static("is_shift_screenshot", &UIManager::IsShiftScreenShot, "Checks if the Shift key is used for screenshots.");
 
 }

@@ -43,3 +43,4 @@ std::vector<uint32_t> merchant_window_items;
 
 ClickHandlerStruct ClickHandler;
 
+IDirect3DDevice9* g_d3d_device = nullptr;
