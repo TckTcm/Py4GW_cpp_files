@@ -620,6 +620,10 @@ namespace GW {
             return UI::Keypress((GW::UI::ControlAction)((uint32_t)GW::UI::ControlAction_UseSkill1 + slot));
         }
 
+        bool PointBlankUseSkill(uint32_t slot) {
+            return UI::Keypress((GW::UI::ControlAction)((uint32_t)GW::UI::ControlAction_UseSkill1 + slot));
+        }
+
         bool UseSkillByID(uint32_t skill_id, uint32_t target) {
             int slot = GetSkillSlot((Constants::SkillID)skill_id);
             if (slot == -1)

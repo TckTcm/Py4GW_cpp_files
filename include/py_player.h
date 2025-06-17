@@ -40,6 +40,7 @@ public:
 
     PyPlayer();
     void GetContext();
+	void ResetContext();
     std::vector<int> GetAgentArray();
     std::vector<int> GetAllyArray();
     std::vector<int> GetNeutralArray();

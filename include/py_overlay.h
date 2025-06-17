@@ -8,6 +8,90 @@ constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 extern GW::Vec3f MouseWorldPos;
 extern GW::Vec2f MouseScreenPos;
 
+struct TimedTexture {
+    IDirect3DTexture9* texture = nullptr;
+    std::wstring name;
+    std::chrono::steady_clock::time_point last_used;
+
+    TimedTexture() = default;
+
+    TimedTexture(IDirect3DTexture9* tex, const std::wstring& key)
+        : texture(tex), name(key), last_used(std::chrono::steady_clock::now()) {
+    }
+
+    void Touch() {
+        last_used = std::chrono::steady_clock::now();
+    }
+};
+
+class TextureManager {
+public:
+    static TextureManager& Instance() {
+        static TextureManager instance;
+        return instance;
+    }
+
+    // Assign device before any texture use
+    void SetDevice(IDirect3DDevice9* device) {
+        d3d_device = device;
+    }
+
+    void AddTexture(const std::wstring& name, IDirect3DTexture9* texture) {
+        textures[name] = TimedTexture(texture, name);
+    }
+
+    IDirect3DTexture9* GetTexture(const std::wstring& name) {
+        auto it = textures.find(name);
+        if (it != textures.end()) {
+            it->second.Touch();
+            return it->second.texture;
+        }
+
+        // Lazy-load if not found
+        if (!d3d_device && g_d3d_device)
+            SetDevice(g_d3d_device);
+
+        if (!d3d_device)
+            return nullptr;
+
+        IDirect3DTexture9* new_texture = nullptr;
+        if (D3DXCreateTextureFromFileW(d3d_device, name.c_str(), &new_texture) == D3D_OK && new_texture) {
+            AddTexture(name, new_texture);
+            return new_texture;
+        }
+
+        return nullptr;
+    }
+
+    void CleanupOldTextures(int timeout_seconds = 30) {
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = textures.begin(); it != textures.end(); ) {
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.last_used).count();
+            if (duration > timeout_seconds) {
+                if (it->second.texture) it->second.texture->Release();
+                it = textures.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+    }
+
+private:
+    std::unordered_map<std::wstring, TimedTexture> textures;
+    IDirect3DDevice9* d3d_device = nullptr;
+};
+
+
+
+
+
+
+
+
+
+
+
 struct GlobalMouseClass {
     void SetMouseWorldPos(float x, float y, float z);
     GW::Vec3f GetMouseWorldPos();
@@ -49,8 +133,11 @@ public:
     GW::Vec3f GetWorldToScreen(const GW::Vec3f& world_position, const XMMATRIX& mat_view, const XMMATRIX& mat_proj, float viewport_width, float viewport_height);
     void GetScreenToWorld();
 
+    TextureManager texture_manager;
+
 public:
-    Overlay();
+    Overlay() : texture_manager(TextureManager::Instance()) { }
+	
     void RefreshDrawList();
     Point2D GetMouseCoords();
     float findZ(float x, float y, float pz);
@@ -102,6 +189,30 @@ public:
     void DrawCubeFilled(Point3D center, float size, ImU32 color);
     void DrawText2D(Point2D position, std::string text, ImU32 color, bool centered = true, float scale = 1.0f);
     void DrawText3D(Point3D position3D, std::string text, ImU32 color, bool autoZ = true, bool centered = true, float scale = 1.0f);
+    void DrawTexture(const std::string& path, float width= 32.0f, float height= 32.0f) {
+        std::wstring wpath(path.begin(), path.end());
+        IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+        if (!tex)
+            return;
+
+
+        ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+        ImGui::Image(tex_id, ImVec2(width, height));
+    }
+	void DrawTexturedRect(float x, float y, float width, float height, const std::string& texture_path) {
+		std::wstring wpath(texture_path.begin(), texture_path.end());
+		IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+		if (!tex)
+			return;
+		ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+		ImGui::GetWindowDrawList()->AddImage(tex_id, ImVec2(x, y), ImVec2(x + width, y + height));
+	}
+	void UpkeepTextures(int timeout=30) {
+		TextureManager::Instance().CleanupOldTextures(timeout);
+	}
+
+    bool ImageButton(const std::string& caption, const std::string& file_path, float width=32.0f, float height=32.0f, int frame_padding = 0);
+
 
 	bool IsMouseClicked(int button);
     Point2D GetDisplaySize();
@@ -150,6 +261,7 @@ public:
     /* +h00C4 */ float field_of_view2;
 
 	void GetContext();
+	void ResetContext();
 	void SetYaw(float _yaw);
 	void SetPitch(float _pitch);
 	void SetCameraPos(float x, float y, float z);
@@ -169,7 +281,10 @@ public:
 
 };
 
+
 class Py2DRenderer {
+private:
+    Overlay overlay;
 public:
 
 	void set_primitives(const std::vector<std::vector<Point2D>>& prims, D3DCOLOR color);
@@ -213,6 +328,9 @@ public:
     void DrawPolyFilled3D(Point3D center, float radius, D3DCOLOR color = 0xFFFFFFFF, int numSegments = 32, bool autoZ = true, bool use_occlusion = true);
     void DrawCubeOutline(Point3D center, float size, D3DCOLOR color, bool use_occlusion=true);
     void DrawCubeFilled(Point3D center, float size, D3DCOLOR color, bool use_occlusion=true);
+    void DrawTexture(const std::string& file_path, float screen_pos_x, float screen_pos_y, float width, float height, uint32_t int_tint);
+    void DrawTexture3D(const std::string& file_path, float world_pos_x, float world_pos_y, float world_pos_z, float width, float height, bool use_occlusion, uint32_t int_tint);
+    void DrawQuadTextured3D(const std::string& file_path, Point3D p1, Point3D p2, Point3D p3, Point3D p4, bool use_occlusion, uint32_t int_tint);
 
     void ApplyStencilMask();
     void ResetStencilMask();
@@ -262,7 +380,7 @@ private:
 
 
 
-	Overlay overlay;
+	
 
     void Py2DRenderer::EnableDepthBuffer(bool enable) {
         g_d3d_device->SetRenderState(D3DRS_ZENABLE, enable ? D3DZB_TRUE : D3DZB_FALSE);

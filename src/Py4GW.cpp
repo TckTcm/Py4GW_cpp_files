@@ -618,8 +618,25 @@ void ShowTooltipInternal(const char* tooltipText)
     }
 }
 
+bool show_console = false;
+
+ImVec2 console_pos = ImVec2(5, 30);
+ImVec2 console_size = ImVec2(800, 700);
+bool console_collapsed = false;
+bool show_compact_console_ini = false;
+
+ImVec2 compact_console_pos = ImVec2(5, 30);
+bool compact_console_collapsed = false;
+
+
+
 void DrawConsole(const char* title, bool* new_p_open = nullptr)
 {
+    
+    ImGui::SetNextWindowPos(console_pos, ImGuiCond_Once);
+    ImGui::SetNextWindowSize(console_size, ImGuiCond_Once);
+    ImGui::SetNextWindowCollapsed(console_collapsed, ImGuiCond_Once);
+
     // Start the main window
     if (!ImGui::Begin(title, new_p_open)) {
         ImGui::End();
@@ -892,10 +909,13 @@ void DrawConsole(const char* title, bool* new_p_open = nullptr)
     ImGui::End(); // Close the main window
 }
 
-bool show_console = false;
+
 
 
 void DrawCompactConsole(bool* new_p_open = nullptr) {
+    ImGui::SetNextWindowPos(compact_console_pos, ImGuiCond_Once);
+    ImGui::SetNextWindowCollapsed(compact_console_collapsed, ImGuiCond_Once);
+
     // Compact console window with fixed auto-resizing
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize;
     if (!ImGui::Begin("Py4GW##compactPy4GWconsole", new_p_open, flags)) {
@@ -1027,7 +1047,7 @@ void DrawCompactConsole(bool* new_p_open = nullptr) {
 
 std::string GetCredits()
 { 
-    return "Py4GW v1.0.57, Apoguita - 2024,2025";
+    return "Py4GW v2.0.0, Apoguita - 2024,2025";
 }
 
 std::string GetLicense()
@@ -1306,9 +1326,42 @@ bool console_open = true;
 
 bool check_login_screen = true;
 
+
 void Py4GW::Draw(IDirect3DDevice9* device) {
     if (!g_d3d_device)
         g_d3d_device = device;
+
+	std::string autoexec_file_path = "";
+
+    if (first_run) {
+        ChangeWorkingDirectory(dllDirectory);
+        script_path2 = dllDirectory + "/Py4GW_widget_manager.py";
+    
+        // === INI HANDLING (early load) ===
+        IniHandler ini_handler;
+        if (ini_handler.Load("Py4GW.ini")) {
+            // Layout
+            console_pos.x = std::stof(ini_handler.Get("expanded_console", "pos_x", "50"));
+            console_pos.y = std::stof(ini_handler.Get("expanded_console", "pos_y", "50"));
+            console_size.x = std::stof(ini_handler.Get("expanded_console", "width", "400"));
+            console_size.y = std::stof(ini_handler.Get("expanded_console", "height", "300"));
+            console_collapsed = ini_handler.Get("expanded_console", "expanded_console_collapsed", "0") == "1";
+
+            compact_console_pos.x = std::stof(ini_handler.Get("compact_console", "pos_x", "50"));
+            compact_console_pos.y = std::stof(ini_handler.Get("compact_console", "pos_y", "50"));
+            compact_console_collapsed = ini_handler.Get("compact_console", "collapsed", "0") == "1";
+
+            show_compact_console_ini = ini_handler.Get("settings", "show_compact_console", "0") == "1";
+
+            show_console = !show_compact_console_ini;
+
+            // Autoexec script path (optional)
+            autoexec_file_path = ini_handler.Get("settings", "autoexec_script", "");
+            if (!autoexec_file_path.empty()) {
+                strcpy(script_path, autoexec_file_path.c_str());
+            }
+        }
+    }
 
 	bool is_map_loading = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
 
@@ -1331,10 +1384,6 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
         Log("Py4GW", GetCredits(), MessageType::Success);
         Log("Py4GW", "Python interpreter initialized.", MessageType::Success);
 
-        ChangeWorkingDirectory(dllDirectory);
-
-        script_path2 = dllDirectory + "/Py4GW_widget_manager.py";
-
         reset_merchant_window_item.start();
 
         if (LoadAndExecuteScriptOnce2()) {
@@ -1349,32 +1398,24 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
             //Log("Py4GW", "Script stopped.", MessageType::Notice);
         }
         
-        IniHandler ini_handler;
 
-        if (ini_handler.Load("Py4GW.ini")) {
-            std::string autoexec_file_path;
-            autoexec_file_path = ini_handler.Get("settings", "autoexec_script", "");
+        if (!autoexec_file_path.empty()) {
+            strcpy(script_path, autoexec_file_path.c_str());
+            Log("Py4GW", "Selected script: " + autoexec_file_path, MessageType::Notice);
+            script_state = ScriptState::Stopped;
 
-            if (!autoexec_file_path.empty()) {
-                strcpy(script_path, autoexec_file_path.c_str());
-                Log("Py4GW", "Selected script: " + autoexec_file_path, MessageType::Notice);
-                script_state = ScriptState::Stopped;
-
-                if (LoadAndExecuteScriptOnce()) {
-                    script_state = ScriptState::Running;
-                    script_timer.reset(); // Reset and start the timer
-                    Log("Py4GW", "Script started.", MessageType::Notice);
-                }
-                else {
-                    ResetScriptEnvironment();
-                    script_state = ScriptState::Stopped;
-                    script_timer.stop(); // Stop the timer
-                    Log("Py4GW", "Script stopped.", MessageType::Notice);
-                }
+            if (LoadAndExecuteScriptOnce()) {
+                script_state = ScriptState::Running;
+                script_timer.reset(); // Reset and start the timer
+                Log("Py4GW", "Script started.", MessageType::Notice);
             }
-
+            else {
+                ResetScriptEnvironment();
+                script_state = ScriptState::Stopped;
+                script_timer.stop(); // Stop the timer
+                Log("Py4GW", "Script stopped.", MessageType::Notice);
+            }
         }
-
 
 	}
 
@@ -1446,7 +1487,10 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 
 
 
-HWND Py4GW::get_gw_window_handle() { return gw_window_handle; }
+HWND Py4GW::get_gw_window_handle() { 
+    return GW::MemoryMgr::GetGWWindowHandle();
+    //return gw_window_handle; 
+}
 
 
 PYBIND11_EMBEDDED_MODULE(Py4GW, m)

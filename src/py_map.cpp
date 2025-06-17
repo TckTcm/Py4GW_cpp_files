@@ -839,9 +839,66 @@ PyMap::PyMap() {
     GetContext();
 }
 
+void PyMap::ResetContext() {
+	instance_time = 0;
+	map_id.Set(GW::Constants::MapID::None);
+    server_region = 255;
+	district = 0;
+    language = 255;
+	foes_killed = 0;
+	foes_to_kill = 0;
+	is_in_cinematic = false;
+    campaign = static_cast<uint32_t>(GW::Constants::Campaign::Core);
+    continent = static_cast<uint32_t>(GW::Continent::DevContinent);
+    region_type = static_cast<uint32_t>(GW::RegionType::Unknown);
+	has_enter_button = false;
+	is_on_world_map = false;
+	is_pvp = false;
+	is_guild_hall = false;
+	is_vanquishable_area = false;
+    amount_of_players_in_instance = 0;
+
+    flags = 0;
+    thumbnail_id = 0;
+    min_party_size = 0;
+    max_party_size = 0;
+    min_player_size = 0;
+    max_player_size = 0;
+    controlled_outpost_id = 0;
+    fraction_mission = 0;
+    min_level = 0;
+    max_level = 0;
+    needed_pq = 0;
+    mission_maps_to = 0;
+    icon_position_x = 0;
+    icon_position_y = 0;
+    icon_start_x = 0;
+    icon_start_y = 0;
+    icon_end_x = 0;
+    icon_end_y = 0;
+    icon_start_x_dupe = 0;
+    icon_start_y_dupe = 0;
+    icon_end_x_dupe = 0;
+    icon_end_y_dupe = 0;
+    file_id = 0;
+    mission_chronology = 0;
+    ha_map_chronology = 0;
+    name_id = 0;
+    description_id = 0;
+	
+}
 void PyMap::GetContext() {
+    
     instance_type = GW::Map::GetInstanceType();
     is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+    
+    
+	if (!is_map_ready) {
+		ResetContext();
+		return;
+	}
+    
+
     instance_time = GW::Map::GetInstanceTime();
     map_id = GW::Map::GetMapID();
 
@@ -1429,7 +1486,22 @@ public:
         GetContext();
     }
 
+	void ResetContext() {
+		agent_id = 0;
+		disabled = 0;
+		casting = 0;
+		skills.clear();
+	}
+
     void GetContext() {
+        auto instance_type = GW::Map::GetInstanceType();
+        bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+        if (!is_map_ready) {
+            ResetContext();
+            return;
+        }
+
         auto player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!player_skillbar) return;
 
@@ -1477,6 +1549,16 @@ public:
             });
 
     }
+
+	void PointBlankUseSkill(uint32_t slot) {
+		if (slot < 1 || slot > 8) {
+			throw std::out_of_range("Skill index out of range (must be between 1 and 8) Given: " + std::to_string(slot));
+		}
+		uint32_t zeroslot = slot - 1;
+		GW::GameThread::Enqueue([zeroslot] {
+			GW::SkillbarMgr::PointBlankUseSkill(zeroslot);
+			});
+	}
 
     bool HeroUseSkill(const uint32_t target_agent_id, const uint32_t skill_number, const uint32_t hero_idx) {
         uint32_t skill_idx = skill_number - 1;
@@ -1668,6 +1750,7 @@ void bind_Skillbar(py::module_& m) {
         .def("LoadSkillTemplate", &Skillbar::LoadSkilltemplate, py::arg("skill_template"), "Load a skill template into the player's skillbar")
         .def("LoadHeroSkillTemplate", &Skillbar::LoadHeroSkillTemplate, py::arg("hero_index"), py::arg("skill_template"), "Load a skill template into a hero's skillbar")
         .def("UseSkill", &Skillbar::UseSkill, py::arg("slot"), py::arg("target"))
+		.def("UseSkillTargetless", &Skillbar::PointBlankUseSkill, py::arg("slot"), "Use a skill in point-blank target")
         .def("HeroUseSkill", &Skillbar::HeroUseSkill, py::arg("target_agent_id"), py::arg("skill_number"), py::arg("hero_idx"))
         .def("ChangeHeroSecondary", &Skillbar::ChangeHeroSecondary, py::arg("hero_index"), py::arg("profession"))
         .def("GetHeroSkillbar", &Skillbar::GetHeroSkillbar, py::arg("hero_index"))

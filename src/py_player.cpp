@@ -41,8 +41,55 @@ public:
 PyPlayer::PyPlayer() {
     GetContext();
 }
+void PyPlayer::ResetContext() {
+	id = 0;
+	agent = 0;
+	target_id = 0;
+	mouse_over_id = 0;
+	observing_id = 0;
+	account_name = "";
+	account_email = "";
+	wins = 0;
+	losses = 0;
+	rating = 0;
+	qualifier_points = 0;
+	rank = 0;
+	tournament_reward_points = 0;
+	morale = 0;
+	experience = 0;
+	current_kurzick = 0;
+	total_earned_kurzick = 0;
+	max_kurzick = 0;
+	current_luxon = 0;
+	total_earned_luxon = 0;
+	max_luxon = 0;
+	current_imperial = 0;
+	total_earned_imperial = 0;
+	max_imperial = 0;
+	current_balth = 0;
+	total_earned_balth = 0;
+	max_balth = 0;
+	current_skill_points = 0;
+	total_earned_skill_points = 0;
+}
 
 void PyPlayer::GetContext() {
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
+	auto player_loaded = GW::PartyMgr::GetIsPlayerLoaded();
+
+	if (!player_loaded) {
+		ResetContext();
+		return;
+	}
+
+
     id = static_cast<int>(GW::Agents::GetControlledCharacterId()); 
     agent = id;
     target_id = static_cast<int>(GW::Agents::GetTargetId());  

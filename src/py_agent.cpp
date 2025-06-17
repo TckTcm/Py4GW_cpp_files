@@ -333,8 +333,40 @@ static std::unordered_map<uint32_t, AgentNameData> agent_name_map;
 
 void PyLivingAgent::RequestName() {
     const auto agentid = agent_id;
-    agent_name_map[agentid].name_ready = false;  // Reset flag for this agent
-	agent_name_map[agentid].agent_name = "";  // Reset name
+
+    // Main thread: safe to update here
+    GW::GameThread::Enqueue([agentid]() {
+        agent_name_map[agentid].name_ready = false;
+        agent_name_map[agentid].agent_name = "";
+        });
+
+    auto in_cinematic = GW::Map::GetIsInCinematic();
+    auto instance_type = GW::Map::GetInstanceType();
+    auto is_map_ready = GW::Map::GetIsMapLoaded() && !GW::Map::GetIsObserving() && instance_type != GW::Constants::InstanceType::Loading;
+
+    if (!is_map_ready || in_cinematic) {
+        GW::GameThread::Enqueue([]() {
+            agent_name_map.clear();
+            });
+        return;
+    }
+
+    if (agentid == 0) {
+        GW::GameThread::Enqueue([agentid]() {
+            agent_name_map[agentid].agent_name = "Invalid ID";
+            agent_name_map[agentid].name_ready = true;
+            });
+        return;
+    }
+
+    auto agent = GW::Agents::GetAgentByID(agentid);
+    if (!agent) {
+        GW::GameThread::Enqueue([agentid]() {
+            agent_name_map[agentid].agent_name = "Invalid ID";
+            agent_name_map[agentid].name_ready = true;
+            });
+        return;
+    }
 
     std::thread([agentid]() {
         std::wstring temp_name;
@@ -345,22 +377,36 @@ void PyLivingAgent::RequestName() {
             });
 
         while (temp_name.empty()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-            auto now = std::chrono::steady_clock::now();
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() >= 500) {
-                agent_name_map[agentid].agent_name = "Timeout";
-                agent_name_map[agentid].name_ready = true;
-                return;  // Timeout without modifying anything
+            auto in_cinematic = GW::Map::GetIsInCinematic();
+            auto instance_type = GW::Map::GetInstanceType();
+            auto is_map_ready = GW::Map::GetIsMapLoaded() && !GW::Map::GetIsObserving() && instance_type != GW::Constants::InstanceType::Loading;
+
+            if (!is_map_ready || in_cinematic) {
+                GW::GameThread::Enqueue([]() {
+                    agent_name_map.clear();
+                    });
+                return;
+            }
+
+            if (std::chrono::steady_clock::now() - start_time >= std::chrono::milliseconds(500)) {
+                GW::GameThread::Enqueue([agentid]() {
+                    agent_name_map[agentid].agent_name = "Timeout";
+                    agent_name_map[agentid].name_ready = true;
+                    });
+                return;
             }
         }
 
-        // Store the name inside the global map
-        agent_name_map[agentid].agent_name = local_WStringToString(temp_name);
-        agent_name_map[agentid].name_ready = true;  // Mark as ready
+        GW::GameThread::Enqueue([agentid, name_str = local_WStringToString(temp_name)]() {
+            agent_name_map[agentid].agent_name = name_str;
+            agent_name_map[agentid].name_ready = true;
+            });
 
-        }).detach();  // Fully detach the thread so it does not block anything
+        }).detach();
 }
+
 
 bool PyLivingAgent::IsAgentNameReady() {
     return agent_name_map[agent_id].name_ready;
@@ -377,7 +423,7 @@ PyItemAgent::PyItemAgent(int agent_id) : agent_id(agent_id) {
 }
 
 void PyItemAgent::GetContext() {
-	owner_id = -1;
+	owner_id = 999;
     if (!agent_id) return;
 
     GW::Agent* temp_agent = GW::Agents::GetAgentByID(agent_id);
@@ -582,7 +628,52 @@ void PyAgent::Set(int agent_id) {
     GetContext();  // Update the context with the given agent ID
 }
 
+void PyAgent::ResetContext() {
+	id = 0;  // Reset the agent ID to 0
+	x = 0.0f;  // Reset the x coordinate
+	y = 0.0f;  // Reset the y coordinate
+	z = 0.0f;  // Reset the z coordinate
+	screen_x = 0.0f;  // Reset the screen x coordinate
+	screen_y = 0.0f;  // Reset the screen y coordinate
+	zplane = 0.0f;  // Reset the z plane
+	rotation_angle = 0.0f;  // Reset the rotation angle
+	rotation_cos = 0.0f;  // Reset the rotation cosine
+	rotation_sin = 0.0f;  // Reset the rotation sine
+	velocity_x = 0.0f;  // Reset the x velocity
+	velocity_y = 0.0f;  // Reset the y velocity
+	is_living = false;  // Reset living status
+	is_item = false;  // Reset item status
+	is_gadget = false;  // Reset gadget status
+	living = nullptr;  // Reset living agent pointer
+    living_agent = 0;
+	item_agent = 0;
+	gadget_agent = 0;
+	attributes.clear();  // Clear the attributes vector
+	instance_timer_in_frames = 0;  // Reset instance timer
+	timer2 = 0;  // Reset timer2
+	model_width1 = 0.0f;  // Reset model width 1
+	model_height1 = 0.0f;  // Reset model height 1
+	model_width2 = 0.0f;  // Reset model width 2
+	model_height2 = 0.0f;  // Reset model height 2
+	model_width3 = 0.0f;  // Reset model width 3
+	model_height3 = 0.0f;  // Reset model height 3
+	name_properties = 0;  // Reset name properties
+	ground = 0;  // Reset ground
+	terrain_normal.clear();  // Clear the terrain normal vector
+	name_tag_x = 0.0f;  // Reset name tag x coordinate
+	name_tag_y = 0.0f;  // Reset name tag y coordinate
+	name_tag_z = 0.0f;  // Reset name tag z coordinate
+	visual_effects = 0;  // Reset visual effects
+}
 void PyAgent::GetContext() {
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
     GW::Agent* agent = GW::Agents::GetAgentByID(id);  // Get the agent by the given ID
     if (!agent) return;
 
@@ -674,51 +765,56 @@ std::vector<PyAgent>& GetRawAgentArray() {
     auto instance_type = GW::Map::GetInstanceType();
     bool is_map_ready = GW::Map::GetIsMapLoaded() && !GW::Map::GetIsObserving() && (instance_type != GW::Constants::InstanceType::Loading);
     bool is_in_cinematic = GW::Map::GetIsInCinematic();
+
     if (!is_map_ready || is_in_cinematic) {
-        agent_ids.clear();
+        agent_ids.clear();  // clear safely
         last_agent_array_update = now;
         return agent_ids;
     }
 
-    if (elapsed.count() < 45)
+    if (elapsed.count() < 60)
         return agent_ids;
 
     last_agent_array_update = now;
 
-    const auto agents = GW::Agents::GetAgentArray();
-    if (!agents || !agents->valid()) {
-        agent_ids.clear();
-        return agent_ids;
-    }
-
-    // Collect current agent IDs
-    std::unordered_set<int> current_ids;
-    for (GW::Agent* agent : *agents) {
-		if (!agent) continue;
-		if (agent->agent_id == 0) continue;
-        current_ids.insert(agent->agent_id);
-    }
-
-    // Remove stale agents and update existing ones
-    for (auto it = agent_ids.begin(); it != agent_ids.end(); ) {
-        if (current_ids.count(it->id) == 0) {
-            it = agent_ids.erase(it);
+    GW::GameThread::Enqueue([]() {
+        const auto agents = GW::Agents::GetAgentArray();
+        if (!agents || !agents->valid()) {
+            agent_ids.clear();
+            return;
         }
-        else {
-            it->GetContext(); // Update only if still present
-            ++it;
-        }
-    }
 
-    // Add new agents
-    for (int id : current_ids) {
-        bool exists = std::any_of(agent_ids.begin(), agent_ids.end(), [id](const PyAgent& a) { return a.id == id; });
-        if (!exists)
-            agent_ids.emplace_back(id); // PyAgent created only if not found
-    }
+        std::unordered_set<int> current_ids;
+        for (GW::Agent* agent : *agents) {
+            if (!agent) continue;
+            if (agent->agent_id == 0) continue;
+            current_ids.insert(agent->agent_id);
+        }
+
+        // Remove stale agents and update existing ones
+        for (auto it = agent_ids.begin(); it != agent_ids.end(); ) {
+            if (current_ids.count(it->id) == 0) {
+                it = agent_ids.erase(it);
+            }
+            else {
+                it->GetContext();  // Update only if still present
+                ++it;
+            }
+        }
+
+        // Add new agents
+        for (int id : current_ids) {
+            bool exists = std::any_of(agent_ids.begin(), agent_ids.end(), [id](const PyAgent& a) {
+                return a.id == id;
+                });
+            if (!exists)
+                agent_ids.emplace_back(id); // PyAgent created only if not found
+        }
+        });
 
     return agent_ids;
 }
+
 
 
 std::vector<std::pair<int, int>> GetMovementStuckArray() {

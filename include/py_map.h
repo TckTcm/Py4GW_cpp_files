@@ -229,6 +229,7 @@ public:
 
     PyMap();
     void GetContext();
+    void ResetContext();
     bool Travel(int map_id, int district, int district_number);
     bool Travel(int map_id);
 	bool Travel(int map_id, int server_region, int district_number, int language);

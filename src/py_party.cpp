@@ -194,8 +194,41 @@ PyParty::PyParty() {
     GetContext();
 }
 
+void PyParty::ResetContext() {
+	party_id = 0;
+	players.clear();
+	heroes.clear();
+	henchmen.clear();
+	is_in_hard_mode = false;  // Changed to snake_case
+	is_hard_mode_unlocked = false;  // Changed to snake_case
+	party_size = 0;  // Changed to snake_case
+	party_player_count = 0;  // Changed to snake_case
+	party_hero_count = 0;  // Changed to snake_case
+	party_henchman_count = 0;  // Changed to snake_case
+	is_party_defeated = false;  // Changed to snake_case
+	is_party_loaded = false;  // Changed to snake_case
+	is_party_leader = false;  // Changed to snake_case
+	tick = false;  // Changed to snake_case
+}
+
 
 void PyParty::GetContext() {
+
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
+    is_party_loaded = GW::PartyMgr::GetIsPartyLoaded();
+
+	if (!is_party_loaded) {
+		ResetContext();
+		return;
+	}
+
     
     tick = GW::PartyMgr::GetIsPartyTicked();  // Changed to snake_case
 
@@ -226,15 +259,21 @@ void PyParty::GetContext() {
         henchmen.emplace_back(henchman.agent_id, henchman.profession, henchman.level);
     }
 
-    is_in_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();  // Changed to snake_case
-    is_hard_mode_unlocked = GW::PartyMgr::GetIsHardModeUnlocked();  // Changed to snake_case
-    party_size = GW::PartyMgr::GetPartySize();  // Changed to snake_case
-    party_player_count = GW::PartyMgr::GetPartyPlayerCount();  // Changed to snake_case
-    party_hero_count = GW::PartyMgr::GetPartyHeroCount();  // Changed to snake_case
-    party_henchman_count = GW::PartyMgr::GetPartyHenchmanCount();  // Changed to snake_case
-    is_party_defeated = GW::PartyMgr::GetIsPartyDefeated();  // Changed to snake_case
-    is_party_loaded = GW::PartyMgr::GetIsPartyLoaded();  // Changed to snake_case
-    is_party_leader = GW::PartyMgr::GetIsLeader();  // Changed to snake_case
+	others.clear();
+    for (size_t i = 0; i < party_info->others.size(); ++i) {
+        const GW::AgentID& p_others = party_info->others[i];
+		others.emplace_back(static_cast<uint32_t>(p_others));
+		
+	}
+
+    is_in_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();  
+    is_hard_mode_unlocked = GW::PartyMgr::GetIsHardModeUnlocked();  
+    party_size = GW::PartyMgr::GetPartySize();  
+    party_player_count = GW::PartyMgr::GetPartyPlayerCount(); 
+    party_hero_count = GW::PartyMgr::GetPartyHeroCount();  
+    party_henchman_count = GW::PartyMgr::GetPartyHenchmanCount();  
+    is_party_defeated = GW::PartyMgr::GetIsPartyDefeated();   
+    is_party_leader = GW::PartyMgr::GetIsLeader(); 
 }
 
 bool PyParty::ReturnToOutpost() {
@@ -617,7 +656,8 @@ void bind_PyParty(py::module_& m) {
         .def_readwrite("players", &PyParty::players)
         .def_readwrite("heroes", &PyParty::heroes)
         .def_readwrite("henchmen", &PyParty::henchmen)
-        .def_readwrite("is_in_hard_mode", &PyParty::is_in_hard_mode)  // snake_case for boolean attributes
+		.def_readwrite("others", &PyParty::others)  
+        .def_readwrite("is_in_hard_mode", &PyParty::is_in_hard_mode) 
         .def_readwrite("is_hard_mode_unlocked", &PyParty::is_hard_mode_unlocked)
         .def_readwrite("party_size", &PyParty::party_size)
         .def_readwrite("party_player_count", &PyParty::party_player_count)

@@ -40,6 +40,7 @@ namespace GW {
 
         // Use Skill in slot (Slot) on (Agent), optionally call that you are using said skill.
         GWCA_API bool UseSkill(uint32_t slot, uint32_t target = 0);
+        GWCA_API bool PointBlankUseSkill(uint32_t slot);
 
         // Send raw packet to use skill with ID (SkillID).
         // Same as above except the skillbar client struct will not be registered as casting.

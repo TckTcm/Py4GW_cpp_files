@@ -294,6 +294,25 @@ namespace GW {
             }
         }
 
+        bool GetIsPlayerLoaded(uint32_t player_index) {
+            PartyInfo* info = GetPartyInfo();
+            if (!(info && info->players.valid())) return false;
+            if (player_index == -1) {
+                // Player
+                uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
+                for (const PlayerPartyMember& player : info->players) {
+                    if (player.login_number == player_id)
+                        return player.connected();
+                }
+                return false;
+            }
+            else {
+                // Someone else
+                if (player_index >= info->players.size()) return false;
+                return (info->players[player_index].connected());
+            }
+        }
+
         bool GetIsLeader() {
             PartyInfo* info = GetPartyInfo();
             if (!(info && info->players.valid())) return false;

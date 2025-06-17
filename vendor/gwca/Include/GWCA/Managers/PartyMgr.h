@@ -55,6 +55,8 @@ namespace GW {
         // check if selected party member is ticked
         GWCA_API bool GetIsPlayerTicked(uint32_t player_index = -1);
 
+        GWCA_API bool GetIsPlayerLoaded(uint32_t player_index = -1);
+
         // check if the whole party is loaded
         GWCA_API bool GetIsPartyLoaded();
 

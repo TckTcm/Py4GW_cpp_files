@@ -245,6 +245,7 @@ public:
     }
 
     void GetContext();
+	void ResetContext();
 	void RequestName();
     bool IsItemNameReady();
 	std::string GetName();
@@ -275,6 +276,7 @@ public:
     int GetSize() const;
     SafeItem* FindItemById(int item_id);
     void GetContext();
+	void ResetContext();
 };
 
 class Inventory {

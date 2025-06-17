@@ -445,8 +445,69 @@ std::string SafeDyeInfoClass::to_string() const {
         ", dye4: " + dye4.to_string() + " }";
 }
 
+void SafeItem::ResetContext() {
+	item_id = 0;
+	agent_id = 0;
+	agent_item_id = 0;
+	name = "";
+	modifiers.clear();
+	IsCustomized = false;
+	item_type = SafeItemTypeClass(0);
+	dye_info = SafeDyeInfoClass();
+	value = 0;
+	interaction = 0;
+	model_id = 0;
+	item_formula = 0;
+	is_material_salvageable = false;
+	quantity = 0;
+	equipped = false;
+	profession = 0;
+	slot = 0;
+	is_stackable = false;
+	is_inscribable = false;
+	is_material = false;
+	is_ZCoin = false;
+	rarity = GW::Constants::Rarity::White;
+	Uses = 0;
+	IsIDKit = false;
+	IsSalvageKit = false;
+	IsTome = false;
+	IsLesserKit = false;
+	IsExpertSalvageKit = false;
+	IsPerfectSalvageKit = false;
+	IsWeapon = false;
+	IsArmor = false;
+	IsSalvagable = false;
+	IsInventoryItem = false;
+	IsStorageItem = false;
+	IsRareMaterial = false;
+    IsOfferedInTrade = false;
+	CanOfferToTrade = false;
+	IsSparkly = false;
+	IsIdentified = false;
+	IsPrefixUpgradable = false;
+	IsSuffixUpgradable = false;
+	IsStackable = false;
+	IsUsable = false;
+	IsTradable = false;
+	IsInscription = false;
+	IsRarityBlue = false;
+	IsRarityPurple = false;
+	IsRarityGreen = false;
+	IsRarityGold = false;
+
+
+} // ResetContext
 
 void SafeItem::GetContext() {
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
     GW::Item* item = GW::Items::GetItemById(item_id);
     if (!item) return;
 
@@ -491,10 +552,11 @@ void SafeItem::GetContext() {
     IsStorageItem = item_ext.IsStorageItem();
     IsRareMaterial = item_ext.IsRareMaterial();
     IsOfferedInTrade = item_ext.IsOfferedInTrade();
-    //CanOfferToTrade = item_ext.CanOfferToTrade();
+    
     IsSparkly = item_ext.IsSparkly();
     IsIdentified = item_ext.GetIsIdentified();
     IsPrefixUpgradable = item_ext.IsPrefixUpgradable();
+	IsSuffixUpgradable = item_ext.IsSuffixUpgradable();
 
 }
 
@@ -620,7 +682,27 @@ SafeItem* SafeBag::FindItemById(int item_id) {
     return nullptr;
 }
 
+void SafeBag::ResetContext() {
+	ID = 0;
+	Name = "";
+	items.clear();
+	container_item = 0;
+	items_count = 0;
+	IsInventoryBag = false;
+	IsStorageBag = false;
+	IsMaterialStorage = false;
+
+}
+
 void SafeBag::GetContext() {
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
     GW::Bag* gw_bag = GW::Items::GetBag(static_cast<GW::Constants::Bag>(ID));
     if (!gw_bag) return;  // If no valid bag, return
 

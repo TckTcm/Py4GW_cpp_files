@@ -130,7 +130,7 @@ public:
     int level = 0;               
 
     HenchmanPartyMember(int agent_id, int prof, int level)
-        : agent_id(agent_id), profession(prof), level(level) {}  // snake_case for variables
+        : agent_id(agent_id), profession(prof), level(level) {} 
 };
 
 
@@ -140,21 +140,23 @@ public:
     std::vector<PlayerPartyMember> players;
     std::vector<HeroPartyMember> heroes;
     std::vector<HenchmanPartyMember> henchmen;
+	std::vector<uint32_t> others; 
 
-    bool is_in_hard_mode = false;  // Changed to snake_case
-    bool is_hard_mode_unlocked = false;  // Changed to snake_case
-    int party_size = 0;  // Changed to snake_case
-    int party_player_count = 0;  // Changed to snake_case
-    int party_hero_count = 0;  // Changed to snake_case
-    int party_henchman_count = 0;  // Changed to snake_case
-    bool is_party_defeated = false;  // Changed to snake_case
-    bool is_party_loaded = false;  // Changed to snake_case
-    bool is_party_leader = false;  // Changed to snake_case
+    bool is_in_hard_mode = false; 
+    bool is_hard_mode_unlocked = false;  
+    int party_size = 0;  
+    int party_player_count = 0;  
+    int party_hero_count = 0;  
+    int party_henchman_count = 0;  
+    bool is_party_defeated = false;  
+    bool is_party_loaded = false;  
+    bool is_party_leader = false;  
 
-    PartyTick tick = false;  // Changed to snake_case
+    PartyTick tick = false;  
 
     PyParty();
     void GetContext();
+	void ResetContext();
     bool ReturnToOutpost();
     bool SetHardMode(bool flag);
     bool RespondToPartyRequest(int party_id, bool accept);
@@ -271,6 +273,17 @@ public:
     // Constructor initializes agent_id and fetches both effects and buffs
     AgentEffects(int agentid) : agent_id(agentid) {
         // Fetch effects for the agent
+        auto instance_type = GW::Map::GetInstanceType();
+        bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+        if (!is_map_ready) {
+			Effects_list.clear();
+			Buffs_list.clear();
+            return;
+        }
+
+
+
         auto* effects = GW::Effects::GetAgentEffects(static_cast<uint32_t>(agent_id));
         if (effects) {
             for (const auto& effect : *effects) {

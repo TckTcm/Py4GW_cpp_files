@@ -44,6 +44,28 @@ void ImGui_TextScaled(std::string& text, const std::array<float, 4>& color, floa
     ImGui::PopFont();  // Pop the font after rendering
 }
 
+//pushid
+void ImGui_PushID(const std::string& str_id) {
+	ImGui::PushID(str_id.c_str());
+}
+
+//popid
+void ImGui_PopID() {
+	ImGui::PopID();
+}
+
+//push clip rect 
+void ImGui_PushClipRect(float x, float y, float width, float height, bool intersect_with_current_clip_rect) {
+	ImVec2 min(x, y);
+	ImVec2 max(x + width, y + height);
+	ImGui::PushClipRect(min, max, intersect_with_current_clip_rect);
+}
+//pop clip rect
+void ImGui_PopClipRect() {
+	ImGui::PopClipRect();
+}
+
+
 //get text line height
 float ImGui_GetTextLineHeight() {
     return ImGui::GetTextLineHeight();
@@ -64,6 +86,7 @@ std::array<float, 2> ImGui_CalcTextSize(const std::string& text) {
 bool ImGui_Button(const std::string& label, float width = 0, float height = 0) {
     return ImGui::Button(label.c_str(), ImVec2(width, height));
 }
+
 
 //invisible button
 bool ImGui_InvisibleButton(const std::string& label, float width, float height) {
@@ -151,6 +174,12 @@ int ImGui_InputInt(const std::string& label, int v) {
     return temp;
 }
 
+//input_int with all parameters available
+int ImGui_InputInt(const std::string& label, int v, int step, int step_fast, ImGuiInputTextFlags flags) {
+	int temp = v;
+	ImGui::InputInt(label.c_str(), &temp, step, step_fast, flags);
+	return temp;
+}
 
 // Combo
 int ImGui_Combo(const std::string& label, int current_item, const std::vector<std::string>& items) {
@@ -259,11 +288,14 @@ void ImGui_PopButtonRepeat() {
 
 
 
-
-
 // ProgressBar
 void ImGui_ProgressBar(float fraction, float size_arg = -1.0f, const std::string& overlay = "") {
     ImGui::ProgressBar(fraction, ImVec2(size_arg, 0), overlay.empty() ? nullptr : overlay.c_str());
+}
+
+// Overloaded ProgressBar with size arguments
+void ImGui_ProgressBar(float fraction, float size_arg_x, float size_arg_y, const std::string& overlay = "") {
+	ImGui::ProgressBar(fraction, ImVec2(size_arg_x, size_arg_y), overlay.empty() ? nullptr : overlay.c_str());
 }
 
 // BulletText
@@ -304,6 +336,7 @@ bool ImGui_BeginChild(const std::string& id, const std::array<float, 2>& size, b
 void ImGui_EndChild() {
     ImGui::EndChild();
 }
+
 
 // BeginGroup and EndGroup
 void ImGui_BeginGroup() {
@@ -416,6 +449,12 @@ void ImGui_EndPopup() {
 bool ImGui_BeginPopupModal(const std::string& name, bool* p_open = nullptr) {
     return ImGui::BeginPopupModal(name.c_str(), p_open);
 }
+
+// Overload 2: BeginPopupModal with flags
+bool ImGui_BeginPopupModal(const std::string& name, bool* p_open, ImGuiWindowFlags flags) {
+	return ImGui::BeginPopupModal(name.c_str(), p_open, flags);
+}
+
 
 void ImGui_EndPopupModal() {
     ImGui::EndPopup();
@@ -607,6 +646,34 @@ float ImGui_GetScrollX() {
 float ImGui_GetScrollY() {
     return ImGui::GetScrollY();
 }
+//SetScrollX
+void ImGui_SetScrollX(float scroll_x) {
+	ImGui::SetScrollX(scroll_x);
+}
+
+//SetScrollY
+void ImGui_SetScrollY(float scroll_y) {
+	ImGui::SetScrollY(scroll_y);
+}
+
+//SetScrollHereX
+void ImGui_SetScrollHereX(float center_x_ratio) {
+	ImGui::SetScrollHereX(center_x_ratio);
+}
+
+//SetScrollHereY
+void ImGui_SetScrollHereY(float center_y_ratio) {
+	ImGui::SetScrollHereY(center_y_ratio);
+}
+
+//SetScrollFromPosX
+void ImGui_SetScrollFromPosX(float local_x, float center_x_ratio) {
+	ImGui::SetScrollFromPosX(local_x, center_x_ratio);
+}
+//SetScrollFromPosY
+void ImGui_SetScrollFromPosY(float local_y, float center_y_ratio) {
+	ImGui::SetScrollFromPosY(local_y, center_y_ratio);
+}
 
 //get_style
 ImGuiStyle& GetStyle() {
@@ -644,6 +711,18 @@ float ImGui_GetCursorPosY() {
 void ImGui_SetCursorPosY(float y) {
 	ImGui::SetCursorPosY(y);
 }
+
+//GetCursorScreenPos
+std::array<float, 2> ImGui_GetCursorScreenPos() {
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+	return { pos.x, pos.y };
+}
+
+//SetCursorScreenPos
+void ImGui_SetCursorScreenPos(float x, float y) {
+	ImGui::SetCursorScreenPos(ImVec2(x, y));
+}
+
 
 //get)cursor_start_pos
 std::array<float, 2> ImGui_GetCursorStartPos() {
@@ -746,18 +825,89 @@ bool ImGui_IsItemClicked(int button) {
 bool ImGui_IsWindowCollapsed() {
     return ImGui::IsWindowCollapsed();
 }
+
+//IsWindowFocused
+bool ImGui_IsWindowFocused() {
+	return ImGui::IsWindowFocused();
+}
+
+//IsWindowHovered
+bool ImGui_IsWindowHovered() {
+	return ImGui::IsWindowHovered();
+}
+
+//IsWindowAppearing
+bool ImGui_IsWindowAppearing() {
+	return ImGui::IsWindowAppearing();
+}
+
 // Active
 bool ImGui_IsItemActive() {
     return ImGui::IsItemActive();
 }
 
+//IsItemFocused
+bool ImGui_IsItemFocused() {
+	return ImGui::IsItemFocused();
+}
+
+// IsItemVisible
+bool ImGui_IsItemVisible() {
+	return ImGui::IsItemVisible();
+}
+
+// IsItemEdited
+bool ImGui_IsItemEdited() {
+	return ImGui::IsItemEdited();
+}
+
+// IsItemDeactivated
+bool ImGui_IsItemDeactivated() {
+	return ImGui::IsItemDeactivated();
+}
+
+// IsItemDeactivatedAfterEdit
+bool ImGui_IsItemDeactivatedAfterEdit() {
+	return ImGui::IsItemDeactivatedAfterEdit();
+}
+
+// IsItemActivated
+bool ImGui_IsItemActivated() {
+	return ImGui::IsItemActivated();
+}
+
+// IsItemToggledOpen
+bool ImGui_IsItemToggledOpen() {
+	return ImGui::IsItemToggledOpen();
+}
+
+
 // Keyboard
 bool ImGui_IsKeyPressed(int key) {
     ImGuiKey imgui_key = static_cast<ImGuiKey>(key);
     return ImGui::IsKeyPressed(imgui_key);
-
-    //return ImGui::IsKeyPressed(key);
 }
+
+//IsKeyReleased
+bool ImGui_IsKeyReleased(int key) {
+	ImGuiKey imgui_key = static_cast<ImGuiKey>(key);
+	return ImGui::IsKeyReleased(imgui_key);
+}
+
+//IsKeyDown
+bool ImGui_IsKeyDown(int key) {
+    ImGuiKey imgui_key = static_cast<ImGuiKey>(key);
+    return ImGui::IsKeyDown(imgui_key);
+}
+
+
+// IsMouseHoveringRect
+bool ImGui_IsMouseHoveringRect(float x1, float y1, float x2, float y2) {
+	return ImGui::IsMouseHoveringRect(ImVec2(x1, y1), ImVec2(x2, y2));
+}
+
+
+
 
 
 // Demo Window
@@ -780,8 +930,8 @@ void ShowTooltip(const char* tooltipText)
     }
 }
 
-void BeginTooltip() {
-    ImGui::BeginTooltip();
+bool BeginTooltip() {
+    return ImGui::BeginTooltip();
 }
 
 void EndTooltip() {
@@ -841,6 +991,28 @@ void ImGui_SetNextItemOpen(bool is_open, ImGuiCond cond = 0) {
 void ImGui_SetNextItemWidth(float item_width) {
 	ImGui::SetNextItemWidth(item_width);
 }
+
+//GetItemRectMin
+std::array<float, 2> ImGui_GetItemRectMin() {
+	ImVec2 pos = ImGui::GetItemRectMin();
+	return { pos.x, pos.y };
+}
+
+//GetItemRectMax
+std::array<float, 2> ImGui_GetItemRectMax() {
+	ImVec2 pos = ImGui::GetItemRectMax();
+	return { pos.x, pos.y };
+}
+
+//GetItemRectSize
+std::array<float, 2> ImGui_GetItemRectSize() {
+	ImVec2 size = ImGui::GetItemRectSize();
+	return { size.x, size.y };
+}
+
+
+
+
 // collapsing headers
 // Function to wrap ImGui::CollapsingHeader without flags
 bool ImGui_CollapsingHeader(const std::string& label) {
@@ -869,6 +1041,78 @@ void ClearSortSpecsDirty(ImGuiTableSortSpecs* specs) {
 void Dummy(const int width, const int height) {
 	ImGui::Dummy(ImVec2(width, height));
 }
+
+
+struct SafeImGuiIO {
+	float display_size_x = 0.0f;
+    float display_size_y = 0.0f;
+    float delta_time = 0.0f;
+    float ini_saving_rate = 0.0f;
+    std::string ini_filename;
+    std::string log_filename;
+    float mouse_double_click_time = 0.0f;
+    float mouse_double_click_max_dist = 0.0f;
+    float mouse_drag_threshold = 0.0f;
+	float mouse_pos_x = 0.0f;
+	float mouse_pos_y = 0.0f;
+    float mouse_wheel = 0.0f;
+    float mouse_wheel_h = 0.0f;
+    bool key_ctrl = false;
+    bool key_shift = false;
+    bool key_alt = false;
+    bool key_super = false;
+    float framerate = 0.0f;
+    int metrics_render_vertices = 0;
+    int metrics_render_indices = 0;
+    int metrics_active_windows = 0;
+    bool want_capture_mouse = false;
+    bool want_capture_keyboard = false;
+    bool want_text_input = false;
+    bool want_set_mouse_pos = false;
+    bool want_save_ini_settings = false;
+	float mouse_pos_prev_x = 0.0f;
+	float mouse_pos_prev_y = 0.0f;
+    bool app_focus_lost = false;
+};
+
+
+SafeImGuiIO GetSafeIO() {
+    ImGuiIO& io = ImGui::GetIO();
+    SafeImGuiIO out;
+    out.display_size_x = io.DisplaySize.x;
+	out.display_size_y = io.DisplaySize.y;
+    out.delta_time = io.DeltaTime;
+    out.ini_saving_rate = io.IniSavingRate;
+    out.ini_filename = io.IniFilename ? io.IniFilename : "";
+    out.log_filename = io.LogFilename ? io.LogFilename : "";
+    out.mouse_double_click_time = io.MouseDoubleClickTime;
+    out.mouse_double_click_max_dist = io.MouseDoubleClickMaxDist;
+    out.mouse_drag_threshold = io.MouseDragThreshold;
+	out.mouse_pos_x = io.MousePos.x;
+	out.mouse_pos_y = io.MousePos.y;
+    out.mouse_wheel = io.MouseWheel;
+    out.mouse_wheel_h = io.MouseWheelH;
+    out.key_ctrl = io.KeyCtrl;
+    out.key_shift = io.KeyShift;
+    out.key_alt = io.KeyAlt;
+    out.key_super = io.KeySuper;
+    out.framerate = io.Framerate;
+    out.metrics_render_vertices = io.MetricsRenderVertices;
+    out.metrics_render_indices = io.MetricsRenderIndices;
+    out.metrics_active_windows = io.MetricsActiveWindows;
+    out.want_capture_mouse = io.WantCaptureMouse;
+    out.want_capture_keyboard = io.WantCaptureKeyboard;
+    out.want_text_input = io.WantTextInput;
+    out.want_set_mouse_pos = io.WantSetMousePos;
+    out.want_save_ini_settings = io.WantSaveIniSettings;
+	out.mouse_pos_prev_x = io.MousePosPrev.x;
+	out.mouse_pos_prev_y = io.MousePosPrev.y;
+    out.app_focus_lost = io.AppFocusLost;
+    return out;
+}
+
+
+
 
 PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     py::enum_<ImGuiSortDirection_>(m, "SortDirection")
@@ -1083,41 +1327,38 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
 
 
     // Bind the ImGuiIO structure
-    py::class_<ImGuiIO>(m, "ImGuiIO")
-        .def_readwrite("display_size", &ImGuiIO::DisplaySize)
-        .def_readwrite("delta_time", &ImGuiIO::DeltaTime)
-        .def_readwrite("ini_saving_rate", &ImGuiIO::IniSavingRate)
-        .def_readwrite("ini_filename", &ImGuiIO::IniFilename)
-        .def_readwrite("log_filename", &ImGuiIO::LogFilename)
-        .def_readwrite("mouse_double_click_time", &ImGuiIO::MouseDoubleClickTime)
-        .def_readwrite("mouse_double_click_max_dist", &ImGuiIO::MouseDoubleClickMaxDist)
-        .def_readwrite("mouse_drag_threshold", &ImGuiIO::MouseDragThreshold)
-        .def_readwrite("mouse_pos", &ImGuiIO::MousePos)
-        .def_readwrite("mouse_wheel", &ImGuiIO::MouseWheel)
-        .def_readwrite("mouse_wheel_h", &ImGuiIO::MouseWheelH)
-        .def_readwrite("key_ctrl", &ImGuiIO::KeyCtrl)
-        .def_readwrite("key_shift", &ImGuiIO::KeyShift)
-        .def_readwrite("key_alt", &ImGuiIO::KeyAlt)
-        .def_readwrite("key_super", &ImGuiIO::KeySuper)
-        .def_readwrite("framerate", &ImGuiIO::Framerate)
-        .def_readwrite("metrics_render_vertices", &ImGuiIO::MetricsRenderVertices)
-        .def_readwrite("metrics_render_indices", &ImGuiIO::MetricsRenderIndices)
-        .def_readwrite("metrics_active_windows", &ImGuiIO::MetricsActiveWindows)
-        //.def_readwrite("metrics_active_allocations", &ImGuiIO::MetricsActiveAllocations)
-        .def_readwrite("want_capture_mouse", &ImGuiIO::WantCaptureMouse)
-        .def_readwrite("want_capture_keyboard", &ImGuiIO::WantCaptureKeyboard)
-        .def_readwrite("want_text_input", &ImGuiIO::WantTextInput)
-        .def_readwrite("want_set_mouse_pos", &ImGuiIO::WantSetMousePos)
-        .def_readwrite("want_save_ini_settings", &ImGuiIO::WantSaveIniSettings)
-        .def_readwrite("mouse_pos_prev", &ImGuiIO::MousePosPrev)
-        .def_readwrite("app_focus_lost", &ImGuiIO::AppFocusLost)
-        // Add more ImGuiIO members as needed
-        ;
+    py::class_<SafeImGuiIO>(m, "ImGuiIO")
+        .def_readonly("display_size_x", &SafeImGuiIO::display_size_x)
+        .def_readonly("display_size_y", &SafeImGuiIO::display_size_y)
+        .def_readonly("delta_time", &SafeImGuiIO::delta_time)
+        .def_readonly("ini_saving_rate", &SafeImGuiIO::ini_saving_rate)
+        .def_readonly("ini_filename", &SafeImGuiIO::ini_filename)
+        .def_readonly("log_filename", &SafeImGuiIO::log_filename)
+        .def_readonly("mouse_double_click_time", &SafeImGuiIO::mouse_double_click_time)
+        .def_readonly("mouse_double_click_max_dist", &SafeImGuiIO::mouse_double_click_max_dist)
+        .def_readonly("mouse_drag_threshold", &SafeImGuiIO::mouse_drag_threshold)
+        .def_readonly("mouse_pos_x", &SafeImGuiIO::mouse_pos_x)
+        .def_readonly("mouse_pos_y", &SafeImGuiIO::mouse_pos_y)
+        .def_readonly("mouse_wheel", &SafeImGuiIO::mouse_wheel)
+        .def_readonly("mouse_wheel_h", &SafeImGuiIO::mouse_wheel_h)
+        .def_readonly("key_ctrl", &SafeImGuiIO::key_ctrl)
+        .def_readonly("key_shift", &SafeImGuiIO::key_shift)
+        .def_readonly("key_alt", &SafeImGuiIO::key_alt)
+        .def_readonly("key_super", &SafeImGuiIO::key_super)
+        .def_readonly("framerate", &SafeImGuiIO::framerate)
+        .def_readonly("metrics_render_vertices", &SafeImGuiIO::metrics_render_vertices)
+        .def_readonly("metrics_render_indices", &SafeImGuiIO::metrics_render_indices)
+        .def_readonly("metrics_active_windows", &SafeImGuiIO::metrics_active_windows)
+        .def_readonly("want_capture_mouse", &SafeImGuiIO::want_capture_mouse)
+        .def_readonly("want_capture_keyboard", &SafeImGuiIO::want_capture_keyboard)
+        .def_readonly("want_text_input", &SafeImGuiIO::want_text_input)
+        .def_readonly("want_set_mouse_pos", &SafeImGuiIO::want_set_mouse_pos)
+        .def_readonly("want_save_ini_settings", &SafeImGuiIO::want_save_ini_settings)
+        .def_readonly("mouse_pos_prev_x", &SafeImGuiIO::mouse_pos_prev_x)
+        .def_readonly("mouse_pos_prev_y", &SafeImGuiIO::mouse_pos_prev_y)
+        .def_readonly("app_focus_lost", &SafeImGuiIO::app_focus_lost);
 
-    // Bind the ImGui::GetIO function
-    m.def("get_io", []() -> ImGuiIO& {
-        return ImGui::GetIO();
-        }, py::return_value_policy::reference);
+    m.def("get_io", &GetSafeIO);
 
 
     py::enum_<ImGuiColWrapper>(m, "ImGuiCol")
@@ -1215,7 +1456,9 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("input_text", py::overload_cast<const std::string&, const std::string&>(&ImGui_InputText), "InputText without flags");
     m.def("input_text", py::overload_cast<const std::string&, const std::string&, ImGuiInputTextFlags>(&ImGui_InputText), "InputText with flags");
     m.def("input_float", &ImGui_InputFloat, "Creates a float input in ImGui");
-    m.def("input_int", &ImGui_InputInt, "Creates an integer input in ImGui");
+	m.def("input_int", py::overload_cast<const std::string&, int>(&ImGui_InputInt), "InputInt without flags");
+	m.def("input_int", py::overload_cast<const std::string&, int, int, int, ImGuiInputTextFlags>(&ImGui_InputInt), "InputInt with flags");
+
     m.def("combo", &ImGui_Combo, "Creates a combo box in ImGui");
 	m.def("selectable", &ImGui_Selectable, "Creates a selectable item in ImGui");
     m.def("color_edit3", &ImGui_ColorEdit3, "A function to create a color editor (RGB)");
@@ -1225,9 +1468,22 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("get_scroll_max_y", &ImGui_GetScrollMaxY, "Returns the maximum scroll value in the y-direction");
     m.def("get_scroll_x", &ImGui_GetScrollX, "Returns the current scroll value in the x-direction");
     m.def("get_scroll_y", &ImGui_GetScrollY, "Returns the current scroll value in the y-direction");
+	m.def("set_scroll_x", &ImGui_SetScrollX, "Sets the scroll value in the x-direction");
+	m.def("set_scroll_y", &ImGui_SetScrollY, "Sets the scroll value in the y-direction");
+	m.def("set_scroll_here_x", &ImGui_SetScrollHereX, "Sets the scroll position in the x-direction");
+	m.def("set_scroll_here_y", &ImGui_SetScrollHereY, "Sets the scroll position in the y-direction");
+	m.def("set_scroll_from_pos_x", &ImGui_SetScrollFromPosX, "Sets the scroll position from a given x-coordinate");
+	m.def("set_scroll_from_pos_y", &ImGui_SetScrollFromPosY, "Sets the scroll position from a given y-coordinate");
 
     // Bind ImGui::GetStyle function
     m.def("get_style", &GetStyle, py::return_value_policy::reference);
+
+    //extra
+	m.def("push_id", &ImGui_PushID, "Pushes an ID onto the stack");
+	m.def("pop_id", &ImGui_PopID, "Pops an ID from the stack");
+
+	m.def("push_clip_rect", &ImGui_PushClipRect, "Pushes a clipping rectangle onto the stack");
+	m.def("pop_clip_rect", &ImGui_PopClipRect, "Pops a clipping rectangle from the stack");
 
     
     // Optionally, expose ImGuiStyle members for Python to access and modify
@@ -1302,6 +1558,8 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
 	m.def("set_cursor_pos_x", &ImGui_SetCursorPosX, "Sets the cursor position in the x-direction");
 	m.def("set_cursor_pos_y", &ImGui_SetCursorPosY, "Sets the cursor position in the y-direction");
     m.def("get_cursor_start_pos", &ImGui_GetCursorStartPos, "Returns the cursor start position in ImGui");
+	m.def("get_cursor_screen_pos", &ImGui_GetCursorScreenPos, "Returns the cursor screen position in ImGui");
+	m.def("set_cursor_screen_pos", &ImGui_SetCursorScreenPos, "Sets the cursor screen position in ImGui");
     m.def("is_rect_visible", &ImGui_IsRectVisible, "Checks if a rectangle is visible in ImGui");
 
 
@@ -1322,13 +1580,25 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("push_button_repeat", &ImGui_PushButtonRepeat, "Pushes a button repeat in ImGui");
     m.def("pop_button_repeat", &ImGui_PopButtonRepeat, "Pops a button repeat in ImGui");
 
-    m.def("progress_bar", &ImGui_ProgressBar, "Displays a progress bar in ImGui");
+	m.def("progress_bar", py::overload_cast<float, float, const std::string&>(&ImGui_ProgressBar), "Displays a progress bar with a custom label in ImGui");
+	m.def("progress_bar", py::overload_cast<float, float, float, const std::string&>(&ImGui_ProgressBar), "Displays a progress bar with custom size and label in ImGui");
     m.def("bullet_text", &ImGui_BulletText, "Displays bullet text in ImGui");
 
     // Windows, Panels, and Groups
     m.def("begin", py::overload_cast<const std::string&>(&ImGui_Begin), "Begin an ImGui window with just a name");
     m.def("begin", py::overload_cast<const std::string&, ImGuiWindowFlags>(&ImGui_Begin), "Begin an ImGui window with a name and window flags");
     m.def("begin", py::overload_cast<const std::string&, bool*, ImGuiWindowFlags>(&ImGui_Begin), "Begin an ImGui window with a name, open condition, and window flags");
+    m.def("begin_with_close",
+        [](const std::string& name, bool p_open, ImGuiWindowFlags flags) {
+            bool open = p_open;  // create local mutable copy
+            bool visible = ImGui::Begin(name.c_str(), &open, flags);
+            return std::make_tuple(visible, open);  // return updated open to Python
+        },
+        py::arg("name"),
+        py::arg("p_open"),
+        py::arg("flags") = 0
+    );
+
 
     m.def("end", &ImGui_End, "Ends the current ImGui window");
     //m.def("begin_child", &ImGui_BeginChild, "Begins a new child window in ImGui")
@@ -1343,6 +1613,10 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("indent", &ImGui_Indent, "Indents widgets in ImGui");
     m.def("unindent", &ImGui_Unindent, "Unindents widgets in ImGui");
     m.def("is_window_collapsed", &ImGui_IsWindowCollapsed, "ImGui is_window_collapsed function");
+	m.def("is_window_focused", &ImGui_IsWindowFocused, "ImGui is_window_focused function");
+	m.def("is_window_hovered", &ImGui_IsWindowHovered, "ImGui is_window_hovered function");
+	m.def("is_window_appearing", &ImGui_IsWindowAppearing, "ImGui is_window_appearing function");
+
 
     // Layout
     m.def("columns", &ImGui_Columns, "Creates columns in ImGui");
@@ -1365,7 +1639,14 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("open_popup", &ImGui_OpenPopup, "Opens a popup in ImGui");
     m.def("begin_popup", &ImGui_BeginPopup, "Begins a popup in ImGui");
     m.def("end_popup", &ImGui_EndPopup, "Ends the popup in ImGui");
-    m.def("begin_popup_modal", &ImGui_BeginPopupModal, "Begins a modal popup in ImGui");
+    m.def("begin_popup_modal",
+        py::overload_cast<const std::string&, bool*>(ImGui_BeginPopupModal),
+        "Begin a modal popup window (standard)");
+
+    m.def("begin_popup_modal",
+        py::overload_cast<const std::string&, bool*, ImGuiWindowFlags>(ImGui_BeginPopupModal),
+        "Begin a modal popup window with flags");
+
     m.def("end_popup_modal", &ImGui_EndPopupModal, "Ends the modal popup in ImGui");
     m.def("close_current_popup", &ImGui_CloseCurrentPopup, "Closes the current popup in ImGui");
 
@@ -1446,7 +1727,18 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("is_item_hovered", &ImGui_IsItemHovered, "Checks if the last item is hovered");
 	m.def("is_item_clicked", &ImGui_IsItemClicked, "Checks if the last item is clicked");
     m.def("is_item_active", &ImGui_IsItemActive, "Checks if the last item is active");
+	m.def("is_item_focused", &ImGui_IsItemFocused, "Checks if the last item is focused");
+	m.def("is_item_visible", &ImGui_IsItemVisible, "Checks if the last item is visible");
+	m.def("is_item_edited", &ImGui_IsItemEdited, "Checks if the last item is edited");
+	m.def("is_item_deactivated", &ImGui_IsItemDeactivated, "Checks if the last item is deactivated");
+	m.def("is_item_deactivated_after_edit", &ImGui_IsItemDeactivatedAfterEdit, "Checks if the last item is deactivated after edit");
+	m.def("is_item_activated", &ImGui_IsItemActivated, "Checks if the last item is activated");
+	m.def("is_item_toggled_open", &ImGui_IsItemToggledOpen, "Checks if the last item is toggled open");
+
     m.def("is_key_pressed", &ImGui_IsKeyPressed, "Checks if a key is pressed");
+	m.def("is_key_released", &ImGui_IsKeyReleased, "Checks if a key is released");
+	m.def("is_key_down", &ImGui_IsKeyDown, "Checks if a key is down");
+
 
     // Miscellaneous
     m.def("show_demo_window", &ImGui_ShowDemoWindow, "Shows the ImGui demo window");
@@ -1469,6 +1761,9 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("get_tree_node_to_label_spacing", &ImGui_GetTreeNodeToLabelSpacing);
     m.def("set_next_item_open", &ImGui_SetNextItemOpen, py::arg("is_open"), py::arg("cond") = 0);
 	m.def("set_next_item_width", &ImGui_SetNextItemWidth, py::arg("item_width"));
+	m.def("get_item_rect_min", &ImGui_GetItemRectMin, "Returns the minimum rectangle of the last item");
+	m.def("get_item_rect_max", &ImGui_GetItemRectMax, "Returns the maximum rectangle of the last item");
+	m.def("get_item_rect_size", &ImGui_GetItemRectSize, "Returns the size of the last item rectangle");
 
     m.def("collapsing_header", py::overload_cast<const std::string&>(&ImGui_CollapsingHeader));
     m.def("collapsing_header", py::overload_cast<const std::string&, ImGuiTreeNodeFlags>(&ImGui_CollapsingHeader));

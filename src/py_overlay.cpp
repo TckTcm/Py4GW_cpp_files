@@ -22,10 +22,6 @@ GW::Vec2f GlobalMouseClass::GetMouseCoords() {
     return MouseScreenPos;
 }
 
-// Overlay methods
-Overlay::Overlay() {
-    //drawList = ImGui::GetWindowDrawList();
-}
 
 void Overlay::RefreshDrawList() {
 	drawList = ImGui::GetWindowDrawList();
@@ -810,6 +806,38 @@ void Overlay::PushClipRect(float x, float y, float x2, float y2) {
 	drawList->PushClipRect(min, max, true);
 }
 
+bool Overlay::ImageButton(const std::string& caption, const std::string& file_path, float width, float height, int frame_padding) {
+    std::wstring wpath(file_path.begin(), file_path.end());
+    auto* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex)
+        return false;
+
+    ImVec2 size(width, height);
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+
+    std::string id_str = caption;
+
+    // Optional: allow frame padding override
+    if (frame_padding >= 0)
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
+
+    bool result = ImGui::ImageButton(
+        id_str.c_str(),      // required unique ID
+        tex_id,
+        size,
+        ImVec2(0, 0), ImVec2(1, 1),
+        ImVec4(0, 0, 0, 0),  // bg color
+        ImVec4(1, 1, 1, 1)   // tint color
+    );
+
+    if (frame_padding >= 0)
+        ImGui::PopStyleVar();
+
+    return result;
+}
+
+
+
 std::vector<float> GetMapBoundaries() {
     GW::MapContext* m = GW::GetMapContext();
     std::vector<float> boundaries;
@@ -1054,17 +1082,17 @@ void bind_overlay(py::module_& m) {
         .def("WorldMapToGamePos", &Overlay::WorlMapToGamePos, py::arg("x"), py::arg("y"), "Convert world map position to game coordinates")
         // World <-> Screen
         .def("WorldMapToScreen", &Overlay::WorldMapToScreen, py::arg("x"), py::arg("y"), "Convert world map position to screen coordinates")
-		.def("ScreenToWorldMap", &Overlay::ScreenToWorldMap, py::arg("x"), py::arg("y"), "Convert screen position to world map coordinates")
+        .def("ScreenToWorldMap", &Overlay::ScreenToWorldMap, py::arg("x"), py::arg("y"), "Convert screen position to world map coordinates")
         // Game <-> Screen (combined)
         .def("GameMapToScreen", &Overlay::GameMapToScreen, py::arg("x"), py::arg("y"), "Convert game map position to screen coordinates")
-		.def("ScreenToGameMapPos", &Overlay::ScreenToGameMapPos, py::arg("x"), py::arg("y"), "Convert screen position to game map coordinates")
+        .def("ScreenToGameMapPos", &Overlay::ScreenToGameMapPos, py::arg("x"), py::arg("y"), "Convert screen position to game map coordinates")
         //NormalizedScreen <-> Screen
-		.def("NormalizedScreenToScreen", &Overlay::NormalizedScreenToScreen, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to screen coordinates")
-		.def("ScreenToNormalizedScreen", &Overlay::ScreenToNormalizedScreen, py::arg("screen_x"), py::arg("screen_y"), "Convert screen coordinates to normalized screen coordinates")
+        .def("NormalizedScreenToScreen", &Overlay::NormalizedScreenToScreen, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to screen coordinates")
+        .def("ScreenToNormalizedScreen", &Overlay::ScreenToNormalizedScreen, py::arg("screen_x"), py::arg("screen_y"), "Convert screen coordinates to normalized screen coordinates")
         //NormalizedScreen <-> World / Game
-		.def("NormalizedScreenToWorldMap", &Overlay::NormalizedScreenToWorldMap, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to world map coordinates")
-		.def("NormalizedScreenToGameMap", &Overlay::NormalizedScreenToGameMap, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to game map coordinates")
-		.def("GamePosToNormalizedScreen", &Overlay::GamePosToNormalizedScreen, py::arg("x"), py::arg("y"), "Convert game position to normalized screen coordinates")
+        .def("NormalizedScreenToWorldMap", &Overlay::NormalizedScreenToWorldMap, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to world map coordinates")
+        .def("NormalizedScreenToGameMap", &Overlay::NormalizedScreenToGameMap, py::arg("norm_x"), py::arg("norm_y"), "Convert normalized screen coordinates to game map coordinates")
+        .def("GamePosToNormalizedScreen", &Overlay::GamePosToNormalizedScreen, py::arg("x"), py::arg("y"), "Convert game position to normalized screen coordinates")
 
         .def("BeginDraw", py::overload_cast<>(&Overlay::BeginDraw), "BeginDraw with no arguments")
         .def("BeginDraw", py::overload_cast<std::string>(&Overlay::BeginDraw), py::arg("name"), "BeginDraw with name")
@@ -1073,28 +1101,31 @@ void bind_overlay(py::module_& m) {
         .def("EndDraw", &Overlay::EndDraw)
         .def("DrawLine", &Overlay::DrawLine, py::arg("from"), py::arg("to"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
         .def("DrawLine3D", &Overlay::DrawLine3D, py::arg("from"), py::arg("to"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawTriangle", &Overlay::DrawTriangle, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawTriangle3D", &Overlay::DrawTriangle3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawTriangleFilled", &Overlay::DrawTriangleFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF)
-		.def("DrawTriangleFilled3D", &Overlay::DrawTriangleFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF)
-		.def("DrawQuad", &Overlay::DrawQuad, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawQuad3D", &Overlay::DrawQuad3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawQuadFilled", &Overlay::DrawQuadFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF)
-		.def("DrawQuadFilled3D", &Overlay::DrawQuadFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF)
-		.def("DrawPoly", &Overlay::DrawPoly, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("thickness") = 1.0f)
-		.def("DrawPoly3D", &Overlay::DrawPoly3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("thickness") = 1.0f, py::arg("autoZ") = true)
-		.def("DrawPolyFilled", &Overlay::DrawPolyFilled, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12)
-		.def("DrawPolyFilled3D", &Overlay::DrawPolyFilled3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("autoZ") = true)
-		.def("DrawCubeOutline", &Overlay::DrawCubeOutline, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-		.def("DrawCubeFilled", &Overlay::DrawCubeFilled, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF)
+        .def("DrawTriangle", &Overlay::DrawTriangle, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
+        .def("DrawTriangle3D", &Overlay::DrawTriangle3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
+        .def("DrawTriangleFilled", &Overlay::DrawTriangleFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF)
+        .def("DrawTriangleFilled3D", &Overlay::DrawTriangleFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF)
+        .def("DrawQuad", &Overlay::DrawQuad, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
+        .def("DrawQuad3D", &Overlay::DrawQuad3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
+        .def("DrawQuadFilled", &Overlay::DrawQuadFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF)
+        .def("DrawQuadFilled3D", &Overlay::DrawQuadFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF)
+        .def("DrawPoly", &Overlay::DrawPoly, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("thickness") = 1.0f)
+        .def("DrawPoly3D", &Overlay::DrawPoly3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("thickness") = 1.0f, py::arg("autoZ") = true)
+        .def("DrawPolyFilled", &Overlay::DrawPolyFilled, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12)
+        .def("DrawPolyFilled3D", &Overlay::DrawPolyFilled3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("numSegments") = 12, py::arg("autoZ") = true)
+        .def("DrawCubeOutline", &Overlay::DrawCubeOutline, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
+        .def("DrawCubeFilled", &Overlay::DrawCubeFilled, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF)
 
         .def("DrawText", &Overlay::DrawText2D, py::arg("position"), py::arg("text"), py::arg("color") = 0xFFFFFFFF, py::arg("centered") = true, py::arg("scale") = 1.0)
         .def("DrawText3D", &Overlay::DrawText3D, py::arg("position3D"), py::arg("text"), py::arg("color") = 0xFFFFFFFF, py::arg("autoZ") = true, py::arg("centered") = true, py::arg("scale") = 1.0)
         .def("GetDisplaySize", &Overlay::GetDisplaySize)
         .def("IsMouseClicked", &Overlay::IsMouseClicked, py::arg("button") = 0)
         .def("PushClipRect", &Overlay::PushClipRect, py::arg("x"), py::arg("y"), py::arg("x2"), py::arg("y2"))
-        .def("PopClipRect", &Overlay::PopClipRect);
-
+        .def("PopClipRect", &Overlay::PopClipRect)
+        .def("DrawTexture", &Overlay::DrawTexture)
+        .def("DrawTexturedRect", &Overlay::DrawTexturedRect)
+        .def("UpkeepTextures", &Overlay::UpkeepTextures)
+        .def("ImageButton", &Overlay::ImageButton, py::arg("caption"), py::arg("file_path"), py::arg("width") = 0.0f, py::arg("height") = 0.0f, py::arg("frame_padding") = -1);
 }
 
 PYBIND11_EMBEDDED_MODULE(PyOverlay, m) {
@@ -1180,7 +1211,65 @@ PyCamera::PyCamera() {
 	GetContext();
 }
 
+void PyCamera::ResetContext() {
+
+	look_at_agent_id = 0;
+	h0004 = 0;
+	h0008 = 0;
+	h000C = 0;
+	max_distance = 0;
+	h0014 = 0;
+	yaw = 0;
+	current_yaw = 0;
+	pitch = 0;
+	camera_zoom = 0;
+	h0024.clear();
+	h0024.resize(4, 0);
+	yaw_right_click = 0;
+	yaw_right_click2 = 0;
+	pitch_right_click = 0;
+	distance2 = 0;
+	acceleration_constant = 0;
+	time_since_last_keyboard_rotation = 0;
+	time_since_last_mouse_rotation = 0;
+	time_since_last_mouse_move = 0;
+	time_since_last_agent_selection = 0;
+	time_in_the_map = 0;
+	time_in_the_district = 0;
+	yaw_to_go = 0;
+	pitch_to_go = 0;
+	dist_to_go = 0;
+	max_distance2 = 0;
+	h0070.clear();
+	h0070.resize(2, 0);
+	position.x = position.y = position.z = camera_pos_to_go.x =
+		camera_pos_to_go.y =
+		camera_pos_to_go.z =
+		cam_pos_inverted.x =
+		cam_pos_inverted.y =
+		cam_pos_inverted.z =
+		cam_pos_inverted_to_go.x =
+		cam_pos_inverted_to_go.y =
+		cam_pos_inverted_to_go.z =
+		look_at_target.x =
+		look_at_target.y =
+		look_at_target.z =
+		look_at_to_go.x =
+		look_at_to_go.y =
+		look_at_to_go.z =
+		field_of_view =
+		field_of_view2 = -1.0f;
+}
+
 void PyCamera::GetContext() {
+    auto instance_type = GW::Map::GetInstanceType();
+    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+    if (!is_map_ready) {
+        ResetContext();
+        return;
+    }
+
     const auto camera = GW::CameraMgr::GetCamera();
 	look_at_agent_id = camera->look_at_agent_id;
 	h0004 = camera->h0004;
@@ -1353,6 +1442,7 @@ void bind_camera(py::module_& m) {
         .def_readwrite("look_at_to_go", &PyCamera::look_at_to_go)
 
         // Methods (bound instance)
+		.def("GetContext", &PyCamera::GetContext)
         .def("SetYaw", &PyCamera::SetYaw, py::arg("_yaw"))
         .def("SetPitch", &PyCamera::SetPitch, py::arg("_pitch"))
         .def("SetMaxDist", &PyCamera::SetMaxDist, py::arg("dist"))
@@ -2073,6 +2163,145 @@ void Py2DRenderer::DrawCubeFilled(Point3D center, float size, D3DCOLOR color, bo
     }
 }
 
+void Py2DRenderer::DrawTexture(const std::string& file_path, float screen_pos_x, float screen_pos_y, float width, float height, uint32_t int_tint) {
+	D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
+	tint = 0xFFFFFFFF; // Force full opacity for 2D textures
+    
+    if (!g_d3d_device) return;
+
+    std::wstring wpath(file_path.begin(), file_path.end());
+    LPDIRECT3DTEXTURE9 texture = overlay.texture_manager.GetTexture(wpath);
+    if (!texture) return;
+
+    float w = width * 0.5f;
+    float h = height * 0.5f;
+
+    struct Vertex {
+        float x, y, z, rhw;
+        float u, v;
+        D3DCOLOR color;
+    };
+
+    Vertex quad[] = {
+        { screen_pos_x - w, screen_pos_y - h, 0.0f, 1.0f, 0.0f, 0.0f, tint },
+        { screen_pos_x + w, screen_pos_y - h, 0.0f, 1.0f, 1.0f, 0.0f, tint },
+        { screen_pos_x + w, screen_pos_y + h, 0.0f, 1.0f, 1.0f, 1.0f, tint },
+        { screen_pos_x - w, screen_pos_y + h, 0.0f, 1.0f, 0.0f, 1.0f, tint },
+    };
+
+    // Set render states for textures
+    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
+    g_d3d_device->SetTexture(0, texture);
+
+    // Set texture blending
+    g_d3d_device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+
+    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, quad, sizeof(Vertex));
+}
+
+
+void Py2DRenderer::DrawTexture3D(const std::string& file_path,float world_pos_x, float world_pos_y, float world_pos_z, float width, float height, bool use_occlusion, uint32_t int_tint) {
+	D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
+    tint = 0xFFFFFFFF;
+
+    if (!g_d3d_device) return;
+
+    std::wstring wpath(file_path.begin(), file_path.end());
+    LPDIRECT3DTEXTURE9 texture = overlay.texture_manager.GetTexture(wpath);
+    if (!texture) return;
+
+    Setup3DView();
+
+    if (!use_occlusion) {
+        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
+        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    }
+
+    // Flip Z to match RH coordinate system
+    world_pos_z = -world_pos_z;
+
+    float w = width / 2.0f;
+    float h = height / 2.0f;
+
+    struct D3DTexturedVertex3D {
+        float x, y, z;
+        float u, v;
+        D3DCOLOR color;
+    };
+
+    D3DTexturedVertex3D verts[] = {
+        { world_pos_x - w, world_pos_y - h, world_pos_z, 0.0f, 0.0f, tint },
+        { world_pos_x + w, world_pos_y - h, world_pos_z, 1.0f, 0.0f, tint },
+        { world_pos_x + w, world_pos_y + h, world_pos_z, 1.0f, 1.0f, tint },
+        { world_pos_x - w, world_pos_y + h, world_pos_z, 0.0f, 1.0f, tint }
+    };
+
+    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
+    g_d3d_device->SetTexture(0, texture);
+    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, verts, sizeof(D3DTexturedVertex3D));
+
+    if (!use_occlusion) {
+        g_d3d_device->SetRenderState(D3DRS_ZENABLE, TRUE);
+        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+    }
+}
+
+void Py2DRenderer::DrawQuadTextured3D(const std::string& file_path,
+    Point3D p1, Point3D p2, Point3D p3, Point3D p4,
+    bool use_occlusion,
+    uint32_t int_tint) {
+    D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
+    tint = 0xFFFFFFFF;
+    if (!g_d3d_device) return;
+
+    std::wstring wpath(file_path.begin(), file_path.end());
+    LPDIRECT3DTEXTURE9 texture = TextureManager::Instance().GetTexture(wpath);
+    if (!texture) return;
+
+    Setup3DView();
+
+    if (!use_occlusion) {
+        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
+        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    }
+
+    // Flip Z to match RH system
+    p1.z = -p1.z;
+    p2.z = -p2.z;
+    p3.z = -p3.z;
+    p4.z = -p4.z;
+
+    struct D3DTexturedVertex3D {
+        float x, y, z;
+        float u, v;
+        D3DCOLOR color;
+    };
+
+    D3DTexturedVertex3D verts[] = {
+        { p1.x, p1.y, p1.z, 0.0f, 0.0f, tint },
+        { p2.x, p2.y, p2.z, 1.0f, 0.0f, tint },
+        { p3.x, p3.y, p3.z, 1.0f, 1.0f, tint },
+        { p4.x, p4.y, p4.z, 0.0f, 1.0f, tint }
+    };
+
+    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
+    g_d3d_device->SetTexture(0, texture);
+    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, verts, sizeof(D3DTexturedVertex3D));
+
+    if (!use_occlusion) {
+        g_d3d_device->SetRenderState(D3DRS_ZENABLE, TRUE);
+        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+    }
+}
+
+
+
+
 
 void bind_2drenderer(py::module_& m) {
     py::class_<Py2DRenderer>(m, "Py2DRenderer")
@@ -2120,7 +2349,12 @@ void bind_2drenderer(py::module_& m) {
 
         .def("Setup3DView", &Py2DRenderer::Setup3DView)
         .def("ApplyStencilMask", &Py2DRenderer::ApplyStencilMask)
-        .def("ResetStencilMask", &Py2DRenderer::ResetStencilMask);
+        .def("ResetStencilMask", &Py2DRenderer::ResetStencilMask)
+		.def("DrawTexture", &Py2DRenderer::DrawTexture, py::arg("file_path"), py::arg("screen_pos_x"), py::arg("screen_pos_y"), py::arg("width") = 100.0f, py::arg("height") = 100.0f, py::arg("int_tint") = 0xFFFFFFFF)
+		.def("DrawTexture3D", &Py2DRenderer::DrawTexture3D, py::arg("file_path"), py::arg("world_pos_x"), py::arg("world_pos_y"), py::arg("world_pos_z"), py::arg("width") = 100.0f, py::arg("height") = 100.0f, py::arg("use_occlusion") = true, py::arg("int_tint") = 0xFFFFFFFF)
+		.def("DrawQuadTextured3D", &Py2DRenderer::DrawQuadTextured3D, py::arg("file_path"),
+			py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"),
+			py::arg("use_occlusion") = true, py::arg("int_tint") = 0xFFFFFFFF);
 }
 
 PYBIND11_EMBEDDED_MODULE(Py2DRenderer, m) {

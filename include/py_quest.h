@@ -98,12 +98,29 @@ public:
 
 	}
 
-	std::vector<uint32_t> GetQuestLog() {
-		std::vector<uint32_t> quest_log;
+	std::vector<QuestData> GetQuestLog() {
+		std::vector<QuestData> quest_log;
 		auto* w = GW::QuestMgr::GetQuestLog();
 		if (!w) return quest_log;
 		for (auto& q : *w) {
-			quest_log.push_back(static_cast<uint32_t>(q.quest_id));
+			quest_log.push_back(QuestData{
+				static_cast<uint32_t>(q.quest_id),
+				q.log_state,
+				"",
+				std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(q.name),
+				"",
+				static_cast<uint32_t>(q.map_from),
+				static_cast<uint32_t>(q.marker.x),
+				static_cast<uint32_t>(q.marker.y),
+				q.h0024,
+				static_cast<uint32_t>(q.map_to),
+				"",
+				"",
+				q.IsCompleted(),
+				q.IsCurrentMissionQuest(),
+				q.IsAreaPrimary(),
+				q.IsPrimary()
+				});
 		}
 		return quest_log;
 	}
