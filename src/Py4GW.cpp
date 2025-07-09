@@ -3,7 +3,7 @@
 #include "Headers.h"
 #include <iostream>
 
-HeroAI* Py4GW::heroAI = nullptr;
+//HeroAI* Py4GW::heroAI = nullptr;
 
 namespace py = pybind11;
 

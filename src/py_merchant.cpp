@@ -4,11 +4,6 @@
 namespace py = pybind11;
 
 
-
-
-
-
-
 PYBIND11_EMBEDDED_MODULE(PyMerchant, m) {
     py::class_<Merchant>(m, "PyMerchant")
         // Constructor

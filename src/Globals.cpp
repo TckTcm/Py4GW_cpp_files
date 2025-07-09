@@ -34,7 +34,7 @@ uint32_t quoted_item_id = 0;
 int quoted_value = 0;   // Stores quoted price
 bool transaction_complete = false; // Tracks transaction completion
 
-MemMgrClass ptrGetter;
+//MemMgrClass ptrGetter;
 
 std::vector<uint32_t> merch_items;
 std::vector<uint32_t> merch_items2;

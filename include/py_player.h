@@ -52,6 +52,7 @@ public:
     std::vector<int> GetOwnedItemArray(int owner_agent_id);
     std::vector<int> GetGadgetArray();
 	std::vector<std::string> GetChatHistory();
+    bool Istyping();
 	void RequestChatHistory();
 	bool IsChatHistoryReady();
     void SendChatCommand(std::string msg);

@@ -3,6 +3,107 @@
 
 namespace py = pybind11;
 
+enum class ProfessionType {
+    None,
+    Warrior,
+    Ranger,
+    Monk,
+    Necromancer,
+    Mesmer,
+    Elementalist,
+    Assassin,
+    Ritualist,
+    Paragon,
+    Dervish
+};
+
+enum class AllegianceType {
+    Unknown,
+    Ally,            // 0x1 = ally/non-attackable
+    Neutral,         // 0x2 = neutral
+    Enemy,           // 0x3 = enemy
+    SpiritPet,       // 0x4 = spirit/pet
+    Minion,          // 0x5 = minion
+    NpcMinipet       // 0x6 = npc/minipet
+};
+
+
+enum class PyWeaponType {
+    Unknown,            // 0 = unknown
+    Bow,                // 1 = bow
+    Axe,                // 2 = axe
+    Hammer,             // 3 = hammer
+    Daggers,            // 4 = daggers
+    Scythe,             // 5 = scythe
+    Spear,              // 6 = spear
+    Sword,              // 7 = sword
+    Scepter,            // 8 = scepter
+    Scepter2,           // 9 = scepter
+    Wand,               // 10 = wand
+    Staff1,             // 11
+    Staff,              // 12
+    Staff2,             // 13
+    Staff3,             // 14
+    Unknown1,
+    Unknown2,
+    Unknown3,
+    Unknown4,
+    Unknown5,
+    Unknown6,
+    Unknown7,
+    Unknown8,
+    Unknown9,
+    Unknown10
+};
+
+enum class SafeAttribute {
+    FastCasting,
+    IllusionMagic,
+    DominationMagic,
+    InspirationMagic,
+    BloodMagic,
+    DeathMagic,
+    SoulReaping,
+    Curses,
+    AirMagic,
+    EarthMagic,
+    FireMagic,
+    WaterMagic,
+    EnergyStorage,
+    HealingPrayers,
+    SmitingPrayers,
+    ProtectionPrayers,
+    DivineFavor,
+    Strength,
+    AxeMastery,
+    HammerMastery,
+    Swordsmanship,
+    Tactics,
+    BeastMastery,
+    Expertise,
+    WildernessSurvival,
+    Marksmanship,
+    Unknown1,
+    Unknown2,
+    Unknown3,
+    DaggerMastery,
+    DeadlyArts,
+    ShadowArts,
+    Communing,
+    RestorationMagic,
+    ChannelingMagic,
+    CriticalStrikes,
+    SpawningPower,
+    SpearMastery,
+    Command,
+    Motivation,
+    Leadership,
+    ScytheMastery,
+    WindPrayers,
+    EarthPrayers,
+    Mysticism,
+    None
+};
 
 
 class Profession {

@@ -128,16 +128,16 @@ public:
         GW::Vec2f FlagPos;
         Timer LastActivity;
         uint32_t Keepalivecounter = 0;
-        BuffManager BuffList;
+        //BuffManager BuffList;
     };
 
     struct MemPlayerStruct {
         MemSinglePlayer MemPlayers[8];
-        HeroBuffManager HeroBuffs;
+        //HeroBuffManager HeroBuffs;
         GameStateClass GameState[8];
         RemoteCommand command[8];
-        CandidateArray Candidates;
-        PartyCandidates  NewCandidates;
+        //CandidateArray Candidates;
+        //PartyCandidates  NewCandidates;
         uint32_t LeaderID = 0;
     };
 

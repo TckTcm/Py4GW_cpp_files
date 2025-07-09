@@ -45,7 +45,7 @@ private:
     ~Py4GW() = default;
     Py4GW(const Py4GW&) = delete;
     void operator=(const Py4GW&) = delete;
-    static HeroAI* heroAI;
+    //static HeroAI* heroAI;
    
 public:
     static bool HeroAI_IsAIEnabled();

@@ -1,14 +1,16 @@
 #pragma once
 #include "HeroAI.h"
 
+
+/*
 void HeroAI::initialize() {
-	MemMgr.InitializeSharedMemory(MemMgr.MemData);
-	MemMgr.GetBasePtr();
+	////MemMgr.InitializeSharedMemory(//MemMgr.MemData);
+	////MemMgr.GetBasePtr();
 	std::string skills_json_path = dllDirectory + "/skills.json";
 	CustomSkillData.Init(skills_json_path);
 	synchTimer.start();
-	GameState.combat.LastActivity.start();
-	GameState.combat.IntervalSkillCasting = 0.0f;
+	//GameState.combat.LastActivity.start();
+	//GameState.combat.IntervalSkillCasting = 0.0f;
 	ScatterRest.start();
 	Pathingdisplay.start();
 	GW::InitPathfinding();
@@ -21,10 +23,10 @@ void HeroAI::initialize() {
 }
 
 void HeroAI::cleanup() {
-	MemMgr.MutexAquire();
-	MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsActive = false;
-	MemMgr.MutexRelease();
-	CloseHandle(MemMgr.hMutex);
+	////MemMgr.MutexAquire();
+	////MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsActive = false;
+	////MemMgr.MutexRelease();
+	//CloseHandle(//MemMgr.hMutex);
 }
 
 
@@ -47,7 +49,7 @@ int HeroAI::GetPartyNumber() {
 
 int HeroAI::GetMemPosByID(GW::AgentID agentID) {
     for (int i = 0; i < 8; i++) {
-        if ((MemMgr.MemData->MemPlayers[i].IsActive) && (MemMgr.MemData->MemPlayers[i].ID == agentID)) {
+        if ((//MemMgr.MemData->MemPlayers[i].IsActive) && (//MemMgr.MemData->MemPlayers[i].ID == agentID)) {
             return i;
         }
     }
@@ -147,13 +149,13 @@ bool HeroAI::HasEffect(const GW::Constants::SkillID skillID, uint32_t agentID)
 
     if ((skill.type == GW::Constants::SkillType::WeaponSpell) && (tempAgentLiving->GetIsWeaponSpelled())) { return true; }
 
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
     auto PlayerID = GetMemPosByID(agentID);
     if (PlayerID != -1) {
-        if (MemMgr.MemData->MemPlayers[PlayerID].BuffList.Exists(skillID)) { MemMgr.MutexRelease(); return true; }
+        if (//MemMgr.MemData->MemPlayers[PlayerID].BuffList.Exists(skillID)) { //MemMgr.MutexRelease(); return true; }
     }
-    if (MemMgr.MemData->HeroBuffs.Exists(agentID, skillID)) { MemMgr.MutexRelease(); return true; }
-    MemMgr.MutexRelease();
+    if (//MemMgr.MemData->HeroBuffs.Exists(agentID, skillID)) { //MemMgr.MutexRelease(); return true; }
+    //MemMgr.MutexRelease();
 
     return false;
 }
@@ -505,15 +507,15 @@ uint32_t  HeroAI::TargetLowestAllyEnergy(bool OtherAlly) {
             //ENERGY CHECKS
             int PIndex = GetMemPosByID(AllyID);
             if (PIndex >= 0) {        
-                MemMgr.MutexAquire();
-                if ((MemMgr.MemData->MemPlayers[PIndex].IsActive) &&
-                    (MemMgr.MemData->MemPlayers[PIndex].Energy < StoredEnergy) &&
+                //MemMgr.MutexAquire();
+                if ((//MemMgr.MemData->MemPlayers[PIndex].IsActive) &&
+                    (//MemMgr.MemData->MemPlayers[PIndex].Energy < StoredEnergy) &&
                     (dist < distance)
                     ) {
-                    StoredEnergy = MemMgr.MemData->MemPlayers[PIndex].Energy;
+                    StoredEnergy = //MemMgr.MemData->MemPlayers[PIndex].Energy;
                     tStoredAllyenergyID = AllyID;
                 }
-                MemMgr.MutexRelease();
+                //MemMgr.MutexRelease();
             }
         }
     }
@@ -986,9 +988,9 @@ bool HeroAI::IsHeroFlagged(int hero) {
         }
     }
     else {
-        MemMgr.MutexAquire();
-        bool ret = ((MemMgr.MemData->MemPlayers[hero - GW::PartyMgr::GetPartyHeroCount()].IsFlagged) && (MemMgr.MemData->MemPlayers[hero - GW::PartyMgr::GetPartyHeroCount()].IsActive)) ? true : false;
-        MemMgr.MutexRelease();
+        //MemMgr.MutexAquire();
+        bool ret = ((//MemMgr.MemData->MemPlayers[hero - GW::PartyMgr::GetPartyHeroCount()].IsFlagged) && (//MemMgr.MemData->MemPlayers[hero - GW::PartyMgr::GetPartyHeroCount()].IsActive)) ? true : false;
+        //MemMgr.MutexRelease();
         return ret;
 
     }
@@ -1034,192 +1036,192 @@ bool HeroAI::UpdateGameVars() {
         candidateSelf.MapID = map_handler.map_id.Get();
 		candidateSelf.MapRegion = static_cast<GW::Constants::ServerRegion>(map_handler.server_region.Get());
         candidateSelf.MapDistrict = map_handler.district;
-        MemMgr.MutexAquire();
-        CandidateUniqueKey = MemMgr.MemData->NewCandidates.Subscribe(candidateSelf);
-        MemMgr.MemData->NewCandidates.DoKeepAlive(CandidateUniqueKey);
-        MemMgr.MutexRelease();
+        //MemMgr.MutexAquire();
+        CandidateUniqueKey = //MemMgr.MemData->NewCandidates.Subscribe(candidateSelf);
+        //MemMgr.MemData->NewCandidates.DoKeepAlive(CandidateUniqueKey);
+        //MemMgr.MutexRelease();
     }
 
     //END CANDIDATES
     
     //receive python commands
 
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
     for (int i = 0; i < 8; i++) {
 
         if (PythonVars[i].Looting.command_issued) {
-            MemMgr.MemData->GameState[i].state.Looting = PythonVars[i].Looting.bool_parameter;
+            //MemMgr.MemData->GameState[i].state.Looting = PythonVars[i].Looting.bool_parameter;
             PythonVars[i].Looting.command_issued = false;
         }
 
         if (PythonVars[i].Following.command_issued) {
-            MemMgr.MemData->GameState[i].state.Following = PythonVars[i].Following.bool_parameter;
+            //MemMgr.MemData->GameState[i].state.Following = PythonVars[i].Following.bool_parameter;
             PythonVars[i].Following.command_issued = false;
         }
 
         if (PythonVars[i].Combat.command_issued) {
-            MemMgr.MemData->GameState[i].state.Combat = PythonVars[i].Combat.bool_parameter;
+            //MemMgr.MemData->GameState[i].state.Combat = PythonVars[i].Combat.bool_parameter;
             PythonVars[i].Combat.command_issued = false;
         }
 
         if (PythonVars[i].Targetting.command_issued) {
-            MemMgr.MemData->GameState[i].state.Targetting = PythonVars[i].Targetting.bool_parameter;
+            //MemMgr.MemData->GameState[i].state.Targetting = PythonVars[i].Targetting.bool_parameter;
             PythonVars[i].Targetting.command_issued = false;
         }
 
         if (PythonVars[i].Collision.command_issued) {
-            MemMgr.MemData->GameState[i].state.Collision = PythonVars[i].Collision.bool_parameter;
+            //MemMgr.MemData->GameState[i].state.Collision = PythonVars[i].Collision.bool_parameter;
             PythonVars[i].Collision.command_issued = false;
         }
 
         for (int j = 0; j < 8; j++) {
             if (PythonVars[i].Skills[j].command_issued) {
-                MemMgr.MemData->GameState[i].CombatSkillState[j] = PythonVars[i].Skills[j].bool_parameter;
+                //MemMgr.MemData->GameState[i].CombatSkillState[j] = PythonVars[i].Skills[j].bool_parameter;
                 PythonVars[i].Skills[j].command_issued = false;
             }
         }
 
         if (PythonVars[i].Flagging.command_issued) {
 
-            MemMgr.MemData->MemPlayers[i].IsFlagged = true;
-            MemMgr.MemData->MemPlayers[i].IsAllFlag = (i == 0) ? true : false;
-            MemMgr.MemData->MemPlayers[i].FlagPos.x = PythonVars[i].Flagging.parameter_3;
-            MemMgr.MemData->MemPlayers[i].FlagPos.y = PythonVars[i].Flagging.parameter_4;
+            //MemMgr.MemData->MemPlayers[i].IsFlagged = true;
+            //MemMgr.MemData->MemPlayers[i].IsAllFlag = (i == 0) ? true : false;
+            //MemMgr.MemData->MemPlayers[i].FlagPos.x = PythonVars[i].Flagging.parameter_3;
+            //MemMgr.MemData->MemPlayers[i].FlagPos.y = PythonVars[i].Flagging.parameter_4;
 
         }
 
         if (PythonVars[i].UnFlagging.command_issued) {
-            MemMgr.MemData->MemPlayers[i].IsFlagged = false;
-            MemMgr.MemData->MemPlayers[i].IsAllFlag = false;
-            MemMgr.MemData->MemPlayers[i].FlagPos.x = 0;
-            MemMgr.MemData->MemPlayers[i].FlagPos.y = 0;
+            //MemMgr.MemData->MemPlayers[i].IsFlagged = false;
+            //MemMgr.MemData->MemPlayers[i].IsAllFlag = false;
+            //MemMgr.MemData->MemPlayers[i].FlagPos.x = 0;
+            //MemMgr.MemData->MemPlayers[i].FlagPos.y = 0;
         }
 
         if (PythonVars[i].Resign.command_issued) {
-            MemMgr.MemData->command[i] = rc_Resign;
+            //MemMgr.MemData->command[i] = rc_Resign;
             PythonVars[i].Resign.command_issued = false;
         }
 
         if (PythonVars[i].Identify.command_issued) {
-            MemMgr.MemData->command[i] = rc_ID;
+            //MemMgr.MemData->command[i] = rc_ID;
             PythonVars[i].Identify.command_issued = false;
         }
 
         if (PythonVars[i].TakeQuest.command_issued) {
-            MemMgr.MemData->command[i] = rc_GetQuest;
+            //MemMgr.MemData->command[i] = rc_GetQuest;
             PythonVars[i].TakeQuest.command_issued = false;
         }
 
         if (PythonVars[i].Salvage.command_issued) {
-            MemMgr.MemData->command[i] = rc_Salvage;
+            //MemMgr.MemData->command[i] = rc_Salvage;
             PythonVars[i].Salvage.command_issued = false;
         }
 
     }
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
     
     
     //Synch Remote Control
-    MemMgr.MutexAquire();
-    GameState.state.Following = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Following;
-    GameState.state.Combat = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Combat;
-    GameState.state.Targetting = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Targetting;
-    GameState.state.Collision = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Collision;
-    GameState.state.Looting = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Looting;
-    MemMgr.MutexRelease();
+    //MemMgr.MutexAquire();
+    GameState.state.Following = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Following;
+    GameState.state.Combat = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Combat;
+    GameState.state.Targetting = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Targetting;
+    GameState.state.Collision = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Collision;
+    GameState.state.Looting = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.Looting;
+    //MemMgr.MutexRelease();
 
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
     for (int i = 0; i < 8; i++) {
-        GameState.CombatSkillState[i] = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].CombatSkillState[i];
+        GameState.CombatSkillState[i] = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].CombatSkillState[i];
     }
-    MemMgr.MutexRelease();
-    MemMgr.MutexAquire();
-    RangedRangeValue = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.RangedRangeValue;
-    MeleeRangeValue = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MeleeRangeValue;
-    Fields.Agent.CollisionRadius = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.CollisionRadius;
-    Fields.Agent.AttractionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.AttractionStrength;
-    Fields.Agent.RepulsionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.RepulsionStrength;
+    //MemMgr.MutexRelease();
+    //MemMgr.MutexAquire();
+    RangedRangeValue = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.RangedRangeValue;
+    MeleeRangeValue = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MeleeRangeValue;
+    Fields.Agent.CollisionRadius = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.CollisionRadius;
+    Fields.Agent.AttractionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.AttractionStrength;
+    Fields.Agent.RepulsionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Agent.RepulsionStrength;
 
-    Fields.Enemy.CollisionRadius = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.CollisionRadius;
-    Fields.Enemy.AttractionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.AttractionStrength;
-    Fields.Enemy.RepulsionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.RepulsionStrength;
+    Fields.Enemy.CollisionRadius = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.CollisionRadius;
+    Fields.Enemy.AttractionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.AttractionStrength;
+    Fields.Enemy.RepulsionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Enemy.RepulsionStrength;
 
-    Fields.Spirit.CollisionRadius = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.CollisionRadius;
-    Fields.Spirit.AttractionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.AttractionStrength;
-    Fields.Spirit.RepulsionStrength = MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.RepulsionStrength;
+    Fields.Spirit.CollisionRadius = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.CollisionRadius;
+    Fields.Spirit.AttractionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.AttractionStrength;
+    Fields.Spirit.RepulsionStrength = //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MemFields.Spirit.RepulsionStrength;
 
     if (RangedRangeValue == 0) {
         RangedRangeValue = GW::Constants::Range::Spellcast;
-        MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.RangedRangeValue = RangedRangeValue;
+        //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.RangedRangeValue = RangedRangeValue;
     }
-    MemMgr.MutexRelease();
-    MemMgr.MutexAquire();
+    //MemMgr.MutexRelease();
+    //MemMgr.MutexAquire();
     if (MeleeRangeValue == 0) {
         MeleeRangeValue = GW::Constants::Range::Spellcast;
-        MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MeleeRangeValue = MeleeRangeValue;
+        //MemMgr.MemData->GameState[GameVars.Party.SelfPartyNumber - 1].state.MeleeRangeValue = MeleeRangeValue;
     }
 
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
 
     
     //KEEP ALIVE
     if (++elapsedCycles > 10000) {
         elapsedCycles = 0;
     };
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
     if ((GameVars.Party.SelfPartyNumber == 1) && (elapsedCycles >= 50)) {
         for (int i = 1; i < 8; i++) {
-            if (MemMgr.MemData->MemPlayers[i].IsActive) {
-                if (MemMgr.MemData->MemPlayers[i].Keepalivecounter == 0)
+            if (//MemMgr.MemData->MemPlayers[i].IsActive) {
+                if (//MemMgr.MemData->MemPlayers[i].Keepalivecounter == 0)
                 {
-                    MemMgr.MemData->MemPlayers[i].IsActive = false;
+                    //MemMgr.MemData->MemPlayers[i].IsActive = false;
                 }
                 else
                 {
-                    MemMgr.MemData->MemPlayers[i].Keepalivecounter = 0;
+                    //MemMgr.MemData->MemPlayers[i].Keepalivecounter = 0;
                 }
             }
         }
         //synchTimer.reset();
         elapsedCycles = 0;
     }
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
     
     //SELF SUBSCRIBE
-    MemMgr.MutexAquire();
-    MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].ID = GameVars.Target.Self.ID;
-	MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Energy = player_agent_handler.living_agent.energy;
-	MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].energyRegen = player_agent_handler.living_agent.energy_regen;
-    MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsActive = true;
-    ++MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter;
-    if (MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter > 10000) {
-        MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter = 1;
+    //MemMgr.MutexAquire();
+    //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].ID = GameVars.Target.Self.ID;
+	//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Energy = player_agent_handler.living_agent.energy;
+	//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].energyRegen = player_agent_handler.living_agent.energy_regen;
+    //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsActive = true;
+    ++//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter;
+    if (//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter > 10000) {
+        //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].Keepalivecounter = 1;
     }; 
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
 
     
     ///////// PYTHON MESSAGING
     
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
 
     for (int i = 0; i < 8; i++) {
 
-        PythonVars[i].is_active = MemMgr.MemData->MemPlayers[i].IsActive;
-        PythonVars[i].Looting.value = MemMgr.MemData->GameState[i].state.Looting;
-        PythonVars[i].Following.value = MemMgr.MemData->GameState[i].state.Following;
-        PythonVars[i].Combat.value = MemMgr.MemData->GameState[i].state.Combat;
-        PythonVars[i].Targetting.value = MemMgr.MemData->GameState[i].state.Targetting;
-        PythonVars[i].Collision.value = MemMgr.MemData->GameState[i].state.Collision;
-        PythonVars[i].agent_id = MemMgr.MemData->MemPlayers[i].ID;
-        PythonVars[i].energy = MemMgr.MemData->MemPlayers[i].Energy;
-        PythonVars[i].energy_regen = MemMgr.MemData->MemPlayers[i].energyRegen;
+        PythonVars[i].is_active = //MemMgr.MemData->MemPlayers[i].IsActive;
+        PythonVars[i].Looting.value = //MemMgr.MemData->GameState[i].state.Looting;
+        PythonVars[i].Following.value = //MemMgr.MemData->GameState[i].state.Following;
+        PythonVars[i].Combat.value = //MemMgr.MemData->GameState[i].state.Combat;
+        PythonVars[i].Targetting.value = //MemMgr.MemData->GameState[i].state.Targetting;
+        PythonVars[i].Collision.value = //MemMgr.MemData->GameState[i].state.Collision;
+        PythonVars[i].agent_id = //MemMgr.MemData->MemPlayers[i].ID;
+        PythonVars[i].energy = //MemMgr.MemData->MemPlayers[i].Energy;
+        PythonVars[i].energy_regen = //MemMgr.MemData->MemPlayers[i].energyRegen;
 
         for (int j = 0; j < 8; j++) {
-            PythonVars[i].Skills[j].value = MemMgr.MemData->GameState[i].CombatSkillState[j];
+            PythonVars[i].Skills[j].value = //MemMgr.MemData->GameState[i].CombatSkillState[j];
         }
     }
 
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
     
     
     //EXPLORABLE ONLY
@@ -1256,25 +1258,25 @@ bool HeroAI::UpdateGameVars() {
         if ((IsHeroFlagged(0)) &&
             (allflag.x) &&
             (allflag.x) &&
-            (!MemMgr.MemData->MemPlayers[0].IsFlagged)
+            (!//MemMgr.MemData->MemPlayers[0].IsFlagged)
             ) {
-            MemMgr.MutexAquire();
-            MemMgr.MemData->MemPlayers[0].IsFlagged = true;
-            MemMgr.MemData->MemPlayers[0].FlagPos.x = allflag.x;
-            MemMgr.MemData->MemPlayers[0].FlagPos.y = allflag.y;
-            MemMgr.MemData->MemPlayers[0].IsAllFlag = true;
+            //MemMgr.MutexAquire();
+            //MemMgr.MemData->MemPlayers[0].IsFlagged = true;
+            //MemMgr.MemData->MemPlayers[0].FlagPos.x = allflag.x;
+            //MemMgr.MemData->MemPlayers[0].FlagPos.y = allflag.y;
+            //MemMgr.MemData->MemPlayers[0].IsAllFlag = true;
             GameVars.Party.Flags[0] = true;
-            MemMgr.MutexRelease();
+            //MemMgr.MutexRelease();
         }
         else {
-            if (!MemMgr.MemData->MemPlayers[0].IsAllFlag) {
-                MemMgr.MutexAquire();
-                MemMgr.MemData->MemPlayers[0].IsFlagged = false;
-                MemMgr.MemData->MemPlayers[0].IsAllFlag = false;
-                MemMgr.MemData->MemPlayers[0].FlagPos.x = 0;
-                MemMgr.MemData->MemPlayers[0].FlagPos.y = 0;
+            if (!//MemMgr.MemData->MemPlayers[0].IsAllFlag) {
+                //MemMgr.MutexAquire();
+                //MemMgr.MemData->MemPlayers[0].IsFlagged = false;
+                //MemMgr.MemData->MemPlayers[0].IsAllFlag = false;
+                //MemMgr.MemData->MemPlayers[0].FlagPos.x = 0;
+                //MemMgr.MemData->MemPlayers[0].FlagPos.y = 0;
                 GameVars.Party.Flags[0] = false;
-                MemMgr.MutexRelease();
+                //MemMgr.MutexRelease();
             }
         }
 
@@ -1295,30 +1297,30 @@ bool HeroAI::UpdateGameVars() {
 
         auto* buffs = GW::Effects::GetPlayerBuffs();
 
-        MemMgr.MutexAquire();
-        MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Clear();
+        //MemMgr.MutexAquire();
+        //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Clear();
 
         if (buffs) {
             for (auto& buff : *buffs) {
-                MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Register(buff.skill_id);
+                //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Register(buff.skill_id);
             }
         }
 
         auto* effects = GW::Effects::GetPlayerEffects();
         if (effects) {
             for (auto& effect : *effects) {
-                MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Register(effect.skill_id);
+                //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].BuffList.Register(effect.skill_id);
             }
         }
-        MemMgr.MutexRelease();
+        //MemMgr.MutexRelease();
 
         /////////////// HERO BUFFS ////////////////
 
-        MemMgr.MutexAquire();
+        //MemMgr.MutexAquire();
         if (GameVars.Party.SelfPartyNumber == 1) {
-            MemMgr.MemData->HeroBuffs.Clear();
+            //MemMgr.MemData->HeroBuffs.Clear();
         }
-        MemMgr.MutexRelease();
+        //MemMgr.MutexRelease();
 
         elapsedBuffCycles = 0;
     }
@@ -1329,7 +1331,7 @@ bool HeroAI::UpdateGameVars() {
         std::vector<int> ally_array = player_handler.GetAllyArray();
 
         if (!ally_array.empty()) {
-            MemMgr.MutexAquire();
+            //MemMgr.MutexAquire();
 
             for (int AllyID : ally_array) {
                 if (!AllyID) { continue; }
@@ -1339,19 +1341,19 @@ bool HeroAI::UpdateGameVars() {
 
                 if (herobuffs) {
                     for (auto& herobuff : *herobuffs) {
-                        MemMgr.MemData->HeroBuffs.Register(AllyID, herobuff.skill_id);
+                        //MemMgr.MemData->HeroBuffs.Register(AllyID, herobuff.skill_id);
                     }
                 }
 
                 auto* heroeffects = GW::Effects::GetAgentEffects(AllyID);
                 if (heroeffects) {
                     for (auto& heroeffect : *heroeffects) {
-                        MemMgr.MemData->HeroBuffs.Register(AllyID, heroeffect.skill_id);
+                        //MemMgr.MemData->HeroBuffs.Register(AllyID, heroeffect.skill_id);
                     }
                 }
             }
 
-            MemMgr.MutexRelease();
+            //MemMgr.MutexRelease();
         }
     }
     //////////////  END HERO BUFFS ///////////// 
@@ -1696,9 +1698,9 @@ void HeroAI::SalvageNext(SalvageAllType type)
 void HeroAI::HandleMessaging()
 {
     ///// REMOTE CONTROL
-    MemMgr.MutexAquire();
-    RemoteCommand rc = MemMgr.MemData->command[GameVars.Party.SelfPartyNumber - 1];
-    MemMgr.MutexRelease();
+    //MemMgr.MutexAquire();
+    RemoteCommand rc = //MemMgr.MemData->command[GameVars.Party.SelfPartyNumber - 1];
+    //MemMgr.MutexRelease();
     uint32_t npcID;
     GW::Agent* tempAgent;
     GW::AgentLiving* tempAgentLiving;
@@ -1756,9 +1758,9 @@ void HeroAI::HandleMessaging()
     default:
         break;
     }
-    MemMgr.MutexAquire();
-    MemMgr.MemData->command[GameVars.Party.SelfPartyNumber - 1] = rc_None;
-    MemMgr.MutexRelease();
+    //MemMgr.MutexAquire();
+    //MemMgr.MemData->command[GameVars.Party.SelfPartyNumber - 1] = rc_None;
+    //MemMgr.MutexRelease();
 
 }
 
@@ -1796,14 +1798,14 @@ GW::AgentID HeroAI::PartyTargetIDChanged() {
 
 void HeroAI::GetPartyTarget()
 {
-    /****************** TARGERT MONITOR **********************/
+    //****************** TARGERT MONITOR
     const auto targetChange = PartyTargetIDChanged();
     if ((GameState.state.isTargettingEnabled()) &&
         (targetChange != 0)) {
         GW::Agents::ChangeTarget(targetChange);
         GameState.combat.StayAlert.reset();
     }
-    /****************** END TARGET MONITOR **********************/
+    //****************** END TARGET MONITOR
 }
 
 HeroAI::FollowTarget HeroAI::GetFollowTarget(bool& FalseLeader, bool& DirectFollow)
@@ -1818,26 +1820,26 @@ HeroAI::FollowTarget HeroAI::GetFollowTarget(bool& FalseLeader, bool& DirectFoll
 	TargetToFollow.IsCasting = agent_handler.living_agent.is_casting;
 	TargetToFollow.angle = agent_handler.rotation_angle;
 
-    MemMgr.MutexAquire();
-    if ((MemMgr.MemData->MemPlayers[0].IsActive) && (MemMgr.MemData->MemPlayers[0].IsFlagged) && (MemMgr.MemData->MemPlayers[0].FlagPos.x) && (MemMgr.MemData->MemPlayers[0].FlagPos.y)) {
-        TargetToFollow.Pos = MemMgr.MemData->MemPlayers[0].FlagPos;
+    //MemMgr.MutexAquire();
+    if ((//MemMgr.MemData->MemPlayers[0].IsActive) && (//MemMgr.MemData->MemPlayers[0].IsFlagged) && (//MemMgr.MemData->MemPlayers[0].FlagPos.x) && (//MemMgr.MemData->MemPlayers[0].FlagPos.y)) {
+        TargetToFollow.Pos = //MemMgr.MemData->MemPlayers[0].FlagPos;
         TargetToFollow.DistanceFromLeader = GW::GetDistance(self_pos, TargetToFollow.Pos);
         TargetToFollow.IsCasting = false;
         TargetToFollow.angle = 0.0f;
         FalseLeader = true;
     }
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
 
-    MemMgr.MutexAquire();
-    if ((MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsFlagged) && (MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos.x != 0) && (MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos.y != 0)) {
-        TargetToFollow.Pos = MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos;
+    //MemMgr.MutexAquire();
+    if ((//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].IsFlagged) && (//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos.x != 0) && (//MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos.y != 0)) {
+        TargetToFollow.Pos = //MemMgr.MemData->MemPlayers[GameVars.Party.SelfPartyNumber - 1].FlagPos;
         TargetToFollow.DistanceFromLeader = GW::GetDistance(self_pos, TargetToFollow.Pos);
         TargetToFollow.IsCasting = false;
         TargetToFollow.angle = 0.0f;
         FalseLeader = true;
         DirectFollow = true;
     }
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
 
     return TargetToFollow;
 }
@@ -1959,7 +1961,7 @@ GW::Vec2f HeroAI::GetClosestValidCoordinate(float x, float y) {
 }
 
 bool HeroAI::FollowLeader(FollowTarget TargetToFollow, float FollowDistanceOnCombat, bool DirectFollow, bool FalseLeader) {
-    /************ FOLLOWING *********************/
+    //************ FOLLOWING
     bool DistanceOutOfcombat = ((TargetToFollow.DistanceFromLeader > GW::Constants::Range::Area * 1.5) && (!GameVars.Party.InAggro));
     bool DistanceInCombat = ((TargetToFollow.DistanceFromLeader > FollowDistanceOnCombat) && (GameVars.Party.InAggro));
     bool AngleChangeOutOfCombat = ((!GameVars.Party.InAggro) && (AngleChange()));
@@ -1999,7 +2001,7 @@ bool HeroAI::FollowLeader(FollowTarget TargetToFollow, float FollowDistanceOnCom
         return true;
     }
     return false;
-    /************ END FOLLOWING *********************/
+    //************ END FOLLOWING
 }
 
 GW::Vec2f HeroAI::CalculateAttractionVector(const GW::Vec2f& entityPos, const GW::Vec2f& massCenter, float strength) {
@@ -2150,7 +2152,7 @@ GW::Vec2f HeroAI::CalculateRepulsionVector(const GW::Vec2f& entityPos) {
 
 bool HeroAI::AvoidCollision()
 {
-    /*************** COLLISION ****************************/
+    //*************** COLLISION
 
     bool oc = (GameVars.Party.SelfPartyNumber > 1) && (GameVars.Party.InAggro) ? true : false;
     bool ooc = (GameVars.Party.SelfPartyNumber > 1) && (!GameVars.Party.InAggro) ? true : false;
@@ -2205,7 +2207,7 @@ bool HeroAI::AvoidCollision()
     }
 
     return false;
-    /***************** END COLLISION ************************/
+    //***************** END COLLISION
 }
 
 bool HeroAI::IsSkillready(uint32_t slot) {
@@ -2216,7 +2218,7 @@ bool HeroAI::IsSkillready(uint32_t slot) {
 
 GW::AgentID HeroAI::GetAppropiateTarget(uint32_t slot) {
     GW::AgentID vTarget = 0;
-    /* --------- TARGET SELECTING PER SKILL --------------*/
+    //* --------- TARGET SELECTING PER SKILL
     if (GameState.state.isTargettingEnabled()) {
         if (GameVars.SkillBar.Skills[slot].HasCustomData) {
             bool Strict = GameVars.SkillBar.Skills[slot].CustomData.Conditions.TargettingStrict;
@@ -2456,18 +2458,18 @@ bool HeroAI::AreCastConditionsMet(uint32_t slot, GW::AgentID agentID) {
 
 
     //ENERGY CHECKS
-    MemMgr.MutexAquire();
+    //MemMgr.MutexAquire();
     int PIndex = GetMemPosByID(agentID);
 
     if (PIndex >= 0) {
-        if ((MemMgr.MemData->MemPlayers[PIndex].IsActive) &&
+        if ((//MemMgr.MemData->MemPlayers[PIndex].IsActive) &&
             (GameVars.SkillBar.Skills[slot].CustomData.Conditions.LessEnergy != 0.0f) &&
-            (MemMgr.MemData->MemPlayers[PIndex].Energy < GameVars.SkillBar.Skills[slot].CustomData.Conditions.LessEnergy)
+            (//MemMgr.MemData->MemPlayers[PIndex].Energy < GameVars.SkillBar.Skills[slot].CustomData.Conditions.LessEnergy)
             ) {
             NoOfFeatures++;
         }
     }
-    MemMgr.MutexRelease();
+    //MemMgr.MutexRelease();
 
 
 
@@ -2763,7 +2765,7 @@ bool HeroAI::CastSkill(uint32_t slot) {
 
 void HeroAI::HandleOOCombat()
 {
-    /****************** OUT OF COMBAT ROUTINES *********************************/
+    //****************** OUT OF COMBAT ROUTINES
     if (GameVars.SkillBar.Skillptr >= 8) {
         GameVars.SkillBar.Skillptr = 0;
         GW::Agents::ChangeTarget(GW::Agents::GetAgentByID((GameVars.Target.Called.ID) ? GameVars.Target.Called.ID : GameVars.Target.Nearest.ID));
@@ -2810,14 +2812,14 @@ void HeroAI::HandleOOCombat()
     default:
         GameState.combat.State = cIdle;
     }
-    /****************** END OUT OF COMBAT ROUTINES *********************************/
+    //****************** END OUT OF COMBAT ROUTINES
 }
 
 
 void HeroAI::HandleCombat()
 {
     PyAgent agent_handler = PyAgent(GameVars.Target.Self.ID);
-    /******************COMBAT ROUTINES *********************************/
+    //******************COMBAT ROUTINES
     if (GameVars.SkillBar.Skillptr >= 8) {
         GameVars.SkillBar.Skillptr = 0;
         if (agent_handler.living_agent.weapon_type != 0) {
@@ -2869,7 +2871,7 @@ void HeroAI::HandleCombat()
         GameState.combat.State = cIdle;
     }
 
-    /******************COMBAT ROUTINES *********************************/
+    //******************COMBAT ROUTINES
 
 }
 
@@ -3356,3 +3358,4 @@ int HeroAI::GetMyPartyPos()
 
 namespace py = pybind11;
 
+*/

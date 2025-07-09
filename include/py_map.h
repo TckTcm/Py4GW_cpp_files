@@ -4,6 +4,79 @@
 namespace py = pybind11;
 
 
+enum class SafeServerRegion {
+    International = -2,
+    America = 0,
+    Korea,
+    Europe,
+    China,
+    Japan,
+    Unknown = 255
+};
+
+
+enum class SafeLanguage {
+    English,
+    Korean,
+    French,
+    German,
+    Italian,
+    Spanish,
+    TraditionalChinese,
+    Japanese = 8,
+    Polish,
+    Russian,
+    BorkBorkBork = 17,
+    Unknown = 255
+};
+
+
+enum class SafeCampaign {
+    Core,
+    Prophecies,
+    Factions,
+    Nightfall,
+    EyeOfTheNorth,
+    BonusMissionPack,
+    Undefined
+};
+
+enum class SafeRegionType {
+    AllianceBattle,
+    Arena,
+    ExplorableZone,
+    GuildBattleArea,
+    GuildHall,
+    MissionOutpost,
+    CooperativeMission,
+    CompetitiveMission,
+    EliteMission,
+    Challenge,
+    Outpost,
+    ZaishenBattle,
+    HeroesAscent,
+    City,
+    MissionArea,
+    HeroBattleOutpost,
+    HeroBattleArea,
+    EotnMission,
+    Dungeon,
+    Marketplace,
+    Unknown,
+    DevRegion
+};
+
+enum class SafeContinent {
+    Kryta,
+    DevContinent,
+    Cantha,
+    BattleIsles,
+    Elona,
+    RealmOfTorment,
+    Undefined
+};
+
+
 // Renamed InstanceTypeClass -> InstanceType
 class InstanceType {
 private:
@@ -242,36 +315,6 @@ public:
     bool SkipCinematic();
     bool EnterChallenge();
     bool CancelEnterChallenge();
-};
-
-
-
-class PyMissionMap {
-public:
-    bool window_open = false;
-    uint32_t frame_id = 0;
-    float left = 0;
-    float top = 0;
-    float right = 0;
-    float bottom = 0;
-    float scale_x = 0;
-    float scale_y = 0;
-    float zoom = 0;
-    float center_x = 0;
-    float center_y = 0;
-    float last_click_x = 0;
-    float last_click_y = 0;
-    float pan_offset_x = 0;
-    float pan_offset_y = 0;
-    float mission_map_screen_center_x = 0;
-    float mission_map_screen_center_y = 0;
-
-
-
-    PyMissionMap() { GetContext(); }
-    void GetContext();
-    
-
 };
 
 

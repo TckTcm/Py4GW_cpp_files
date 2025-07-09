@@ -235,14 +235,14 @@ public:
 private:
 	
 	bool TickOnLoad = false;
-	MemMgrClass MemMgr;
+	//MemMgrClass MemMgr;
 	CustomSkillClass CustomSkillData;
 	Timer synchTimer;
 	Timer ScatterRest;
 	Timer Pathingdisplay;
 	Timer BipFixtimer;
-	GameStateClass GameState;
-	GameStateClass ControlAll;
+	//GameStateClass GameState;
+	//GameStateClass ControlAll;
 	GameVarsStruct GameVars;
 	int CandidateUniqueKey = -1;
 	int elapsedCycles = 0;
@@ -253,7 +253,7 @@ private:
 	float GridSize = 160.0f;
 	float oldAngle;
 	float ScatterPos[8] = { 0.0f, 45.0f, -45.0f, 90.0f, -90.0f, 135.0f, -135.0f, 180.0f };
-	FieldsClass Fields;
+	//FieldsClass Fields;
 	GW::Vec3f PlayerPos;
 	IdentifyAllType identify_all_type = IdentifyAllType::None;
 	bool want_to_salvage = false;

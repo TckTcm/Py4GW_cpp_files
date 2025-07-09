@@ -788,10 +788,6 @@ void Overlay::DrawText3D(Point3D position3D, std::string text, ImU32 color, bool
     ImGui::PopFont();  // Pop the font after rendering
 }
 
-
-
-
-
 Point2D Overlay::GetDisplaySize() {
     drawList = ImGui::GetWindowDrawList();
     ImGuiIO& io = ImGui::GetIO();
@@ -810,6 +806,90 @@ void Overlay::PushClipRect(float x, float y, float x2, float y2) {
 	ImVec2 max(x2, y2);
 	drawList->PushClipRect(min, max, true);
 }
+
+void Overlay::DrawTexture(const std::string& path, float width, float height)
+{
+    std::wstring wpath(path.begin(), path.end());
+    IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex)
+        return;
+
+
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+    ImGui::Image(tex_id, ImVec2(width, height));
+}
+
+void Overlay::DrawTexture(const std::string& path,
+    std::tuple<float, float> size,
+    std::tuple<float, float> uv0,
+    std::tuple<float, float> uv1,
+    std::tuple<int, int, int, int> tint,
+    std::tuple<int, int, int, int> border_col) {
+    std::wstring wpath(path.begin(), path.end());
+    IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex)
+        return;
+
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+    ImVec2 im_size(std::get<0>(size), std::get<1>(size));
+    //ImVec2 im_pos(std::get<0>(pos), std::get<1>(pos));
+    ImVec2 im_uv0(std::get<0>(uv0), std::get<1>(uv0));
+    ImVec2 im_uv1(std::get<0>(uv1), std::get<1>(uv1));
+
+    ImVec4 color = ImVec4(
+        std::get<0>(tint) / 255.0f,
+        std::get<1>(tint) / 255.0f,
+        std::get<2>(tint) / 255.0f,
+        std::get<3>(tint) / 255.0f
+    );
+
+	ImVec4 border_color = ImVec4(
+		std::get<0>(border_col) / 255.0f,
+		std::get<1>(border_col) / 255.0f,
+		std::get<2>(border_col) / 255.0f,
+		std::get<3>(border_col) / 255.0f
+	);
+
+    //ImGui::SetCursorPos(im_pos);
+	ImGui::Image(tex_id, im_size, im_uv0, im_uv1, color, border_color);
+}
+
+void Overlay::DrawTexturedRect(float x, float y, float width, float height, const std::string& texture_path) {
+    std::wstring wpath(texture_path.begin(), texture_path.end());
+    IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex)
+        return;
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+    ImGui::GetWindowDrawList()->AddImage(tex_id, ImVec2(x, y), ImVec2(x + width, y + height));
+}
+
+void Overlay::DrawTexturedRect(std::tuple<float, float> pos,
+    std::tuple<float, float> size,
+    const std::string& texture_path,
+    std::tuple<float, float> uv0,
+    std::tuple<float, float> uv1,
+    std::tuple<int, int, int, int> tint)
+{
+    std::wstring wpath(texture_path.begin(), texture_path.end());
+    IDirect3DTexture9* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex) return;
+
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+
+    const float x = std::get<0>(pos), y = std::get<1>(pos);
+    const float w = std::get<0>(size), h = std::get<1>(size);
+    ImVec2 uv_start(std::get<0>(uv0), std::get<1>(uv0));
+    ImVec2 uv_end(std::get<0>(uv1), std::get<1>(uv1));
+    ImVec4 tint_color(
+        std::get<0>(tint) / 255.0f,
+        std::get<1>(tint) / 255.0f,
+        std::get<2>(tint) / 255.0f,
+        std::get<3>(tint) / 255.0f
+    );
+
+    ImGui::GetWindowDrawList()->AddImage(tex_id, ImVec2(x, y), ImVec2(x + w, y + h), uv_start, uv_end, ImGui::ColorConvertFloat4ToU32(tint_color));
+}
+
 
 bool Overlay::ImageButton(const std::string& caption, const std::string& file_path, float width, float height, int frame_padding) {
     std::wstring wpath(file_path.begin(), file_path.end());
@@ -841,245 +921,56 @@ bool Overlay::ImageButton(const std::string& caption, const std::string& file_pa
     return result;
 }
 
-
-
-std::vector<float> GetMapBoundaries() {
-    GW::MapContext* m = GW::GetMapContext();
-    std::vector<float> boundaries;
-    for (int i = 0; i < 5; i++) {
-        boundaries.push_back(m->map_boundaries[i]);
-    }
-    return boundaries;
-};
-
-struct PathingTrapezoid {
-    uint32_t id;
-    std::vector<uint32_t> neighbor_ids; // Indices of adjacent trapezoids
-    uint16_t portal_left;
-    uint16_t portal_right;
-    float XTL;
-    float XTR;
-    float YT;
-    float XBL;
-    float XBR;
-    float YB;
-
-    PathingTrapezoid()
-        : id(0), portal_left(0xFFFF), portal_right(0xFFFF),
-        XTL(0), XTR(0), YT(0), XBL(0), XBR(0), YB(0) {}
-};
-
-struct Node {
-    uint32_t type; // XNode = 0, YNode = 1, SinkNode = 2
-    uint32_t id;
-
-    Node() : type(0), id(0) {}
-};
-
-struct XNode : Node {
-    std::pair<float, float> pos; // Position (x, y)
-    std::pair<float, float> dir; // Direction vector (x, y)
-    uint32_t left_id;  // Left node ID
-    uint32_t right_id; // Right node ID
-
-    XNode() : pos({ 0.0f, 0.0f }), dir({ 0.0f, 0.0f }), left_id(UINT32_MAX), right_id(UINT32_MAX) {
-        type = 0; // Set type to XNode
-    }
-};
-
-struct YNode : Node {
-    std::pair<float, float> pos; // Position (x, y)
-    uint32_t left_id;  // Left node ID
-    uint32_t right_id; // Right node ID
-
-    YNode() : pos({ 0.0f, 0.0f }), left_id(UINT32_MAX), right_id(UINT32_MAX) {
-        type = 1; // Set type to YNode
-    }
-};
-
-struct SinkNode : Node {
-    std::vector<uint32_t> trapezoid_ids; // IDs of associated trapezoids
-
-    SinkNode() {
-        type = 2; // Set type to SinkNode
-    }
-};
-
-struct Portal {
-    uint16_t left_layer_id;
-    uint16_t right_layer_id;
-    uint32_t h0004;
-    uint32_t pair_index;  // Index of the paired portal
-    std::vector<uint32_t> trapezoid_indices; // IDs of associated trapezoids
-
-    Portal() : left_layer_id(0xFFFF), right_layer_id(0xFFFF), h0004(0), pair_index(UINT32_MAX) {}
-};
-
-struct PathingMap {
-    uint32_t zplane;
-    uint32_t h0004;
-    uint32_t h0008;
-    uint32_t h000C;
-    uint32_t h0010;
-    std::vector<PathingTrapezoid> trapezoids;
-    std::vector<SinkNode> sink_nodes;
-    std::vector<XNode> x_nodes;
-    std::vector<YNode> y_nodes;
-    uint32_t h0034;
-    uint32_t h0038;
-    std::vector<Portal> portals;
-    uint32_t root_node_id;
-
-    PathingMap()
-        : zplane(UINT32_MAX), h0004(0), h0008(0), h000C(0), h0010(0), h0034(0), h0038(0), root_node_id(UINT32_MAX) {}
-};
-
-PathingTrapezoid ConvertTrapezoid(const GW::PathingTrapezoid& original) {
-    PathingTrapezoid trapezoid;
-    trapezoid.id = original.id;
-    trapezoid.XTL = original.XTL;
-    trapezoid.XTR = original.XTR;
-    trapezoid.YT = original.YT;
-    trapezoid.XBL = original.XBL;
-    trapezoid.XBR = original.XBR;
-    trapezoid.YB = original.YB;
-    trapezoid.portal_left = original.portal_left;
-    trapezoid.portal_right = original.portal_right;
-
-    // Map adjacent trapezoids by their IDs
-    for (int i = 0; i < 4; ++i) {
-        if (original.adjacent[i]) {
-            trapezoid.neighbor_ids.push_back(original.adjacent[i]->id);
-        }
-    }
-
-    return trapezoid;
-}
-
-PathingMap ConvertPathingMap(const GW::PathingMap& original) {
-    PathingMap pathing_map;
-    pathing_map.zplane = original.zplane;
-
-    // Convert trapezoids
-    for (uint32_t i = 0; i < original.trapezoid_count; ++i) {
-        pathing_map.trapezoids.push_back(ConvertTrapezoid(original.trapezoids[i]));
-    }
-
-    // Convert SinkNodes
-    /*
-    for (uint32_t i = 0; i < original.sink_node_count; ++i) {
-        SinkNode sink_node;
-        sink_node.id = original.sink_nodes[i].id;
-
-        // Safely iterate through the null-terminated trapezoid list
-        if (original.sink_nodes[i].trapezoid) { // Ensure the trapezoid list exists
-            const GW::PathingTrapezoid* const* trapezoid_ptr = original.sink_nodes[i].trapezoid;
-
-            // Iterate until the null-terminator is reached
-            while (*trapezoid_ptr != nullptr) {
-                sink_node.trapezoid_ids.push_back((*trapezoid_ptr)->id);
-                ++trapezoid_ptr; // Move to the next pointer in the array
-            }
-        }
-
-        // Add the converted SinkNode to the destination map
-        pathing_map.sink_nodes.push_back(sink_node);
-    }
-    */
-
-    // Convert XNodes
-    for (uint32_t i = 0; i < original.x_node_count; ++i) {
-        XNode x_node;
-        x_node.id = original.x_nodes[i].id;
-        x_node.pos = { original.x_nodes[i].pos.x, original.x_nodes[i].pos.y };
-        x_node.dir = { original.x_nodes[i].dir.x, original.x_nodes[i].dir.y };
-        if (original.x_nodes[i].left) x_node.left_id = original.x_nodes[i].left->id;
-        if (original.x_nodes[i].right) x_node.right_id = original.x_nodes[i].right->id;
-
-        pathing_map.x_nodes.push_back(x_node);
-    }
-
-    // Convert YNodes
-    for (uint32_t i = 0; i < original.y_node_count; ++i) {
-        YNode y_node;
-        y_node.id = original.y_nodes[i].id;
-        y_node.pos = { original.y_nodes[i].pos.x, original.y_nodes[i].pos.y };
-        if (original.y_nodes[i].left) y_node.left_id = original.y_nodes[i].left->id;
-        if (original.y_nodes[i].right) y_node.right_id = original.y_nodes[i].right->id;
-
-        pathing_map.y_nodes.push_back(y_node);
-    }
-
-    // Convert Portals
-    for (uint32_t i = 0; i < original.portal_count; ++i) {
-        Portal portal;
-        portal.left_layer_id = original.portals[i].left_layer_id;
-        portal.right_layer_id = original.portals[i].right_layer_id;
-        portal.h0004 = original.portals[i].h0004;
-
-        // Map trapezoids connected by the portal
-        for (uint32_t j = 0; j < original.portals[i].count; ++j) {
-            portal.trapezoid_indices.push_back(original.portals[i].trapezoids[j]->id);
-        }
-
-        // Determine the pair index manually
-        portal.pair_index = UINT32_MAX; // Default to invalid
-        if (original.portals[i].pair) {
-            for (uint32_t k = 0; k < original.portal_count; ++k) {
-                if (&original.portals[k] == original.portals[i].pair) {
-                    portal.pair_index = k;
-                    break;
-                }
-            }
-        }
-
-        pathing_map.portals.push_back(portal);
-    }
-
-    return pathing_map;
-}
-
-
-
-std::vector<PathingMap> GetPathingMaps() {
-    const auto* pathing_map_array = GW::Map::GetPathingMap();
-
-    std::vector<PathingMap> converted_maps;
-
-    if (pathing_map_array) {
-        for (size_t i = 0; i < pathing_map_array->size(); ++i) {
-            converted_maps.push_back(ConvertPathingMap((*pathing_map_array)[i]));
-        }
-    }
-
-    return converted_maps;
-}
-
-std::vector<std::tuple<float, float, float>> GetPlannedPath(float start_x, float start_y, float start_z,
-	                                     float goal_x, float goal_y, float goal_z=0) 
+bool Overlay::ImageButton(const std::string& caption, const std::string& file_path,
+    std::tuple<float, float> size,
+    std::tuple<float, float> uv0,
+    std::tuple<float, float> uv1,
+    std::tuple<int, int, int, int> bg_color,
+    std::tuple<int, int, int, int> tint_color,
+    int frame_padding)
 {
-	// Check if the function pointer is valid
-    std::vector<std::tuple<float, float, float>> result;
-    if (!GW::FindPath_Func)
-        return result;
-    GW::PathPoint pathArray[30];
-    uint32_t pathCount = 30;
-    GW::GamePos game_pos = GW::GamePos(start_x, start_y, start_z);
-    GW::PathPoint start{ game_pos, nullptr };
-    GW::GamePos goal = GW::GamePos(goal_x, goal_y, goal_z);
-	GW::PathPoint goal_point{ goal, nullptr };
+    std::wstring wpath(file_path.begin(), file_path.end());
+    auto* tex = TextureManager::Instance().GetTexture(wpath);
+    if (!tex)
+        return false;
 
-    GW::FindPath_Func(&start, &goal_point, 4500.0f, pathCount, &pathCount, pathArray);
+    ImTextureID tex_id = reinterpret_cast<ImTextureID>(tex);
+    ImVec2 sz(std::get<0>(size), std::get<1>(size));
+    ImVec2 uv0f(std::get<0>(uv0), std::get<1>(uv0));
+    ImVec2 uv1f(std::get<0>(uv1), std::get<1>(uv1));
 
-    for (uint32_t i = 0; i < pathCount; ++i) {
-        const GW::GamePos& p = pathArray[i].pos;
-        result.push_back({ p.x, p.y, p.zplane });
-    }
+    ImVec4 bg(
+        std::get<0>(bg_color) / 255.0f,
+        std::get<1>(bg_color) / 255.0f,
+        std::get<2>(bg_color) / 255.0f,
+        std::get<3>(bg_color) / 255.0f
+    );
+
+    ImVec4 tint(
+        std::get<0>(tint_color) / 255.0f,
+        std::get<1>(tint_color) / 255.0f,
+        std::get<2>(tint_color) / 255.0f,
+        std::get<3>(tint_color) / 255.0f
+    );
+
+    if (frame_padding >= 0)
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
+
+    bool result = ImGui::ImageButton(
+        caption.c_str(),
+        tex_id,
+        sz,
+        uv0f,
+        uv1f,
+        bg,
+        tint
+    );
+
+    if (frame_padding >= 0)
+        ImGui::PopStyleVar();
 
     return result;
 }
-
-
 
 
 namespace py = pybind11;
@@ -1152,10 +1043,76 @@ void bind_overlay(py::module_& m) {
         .def("IsMouseClicked", &Overlay::IsMouseClicked, py::arg("button") = 0)
         .def("PushClipRect", &Overlay::PushClipRect, py::arg("x"), py::arg("y"), py::arg("x2"), py::arg("y2"))
         .def("PopClipRect", &Overlay::PopClipRect)
-        .def("DrawTexture", &Overlay::DrawTexture)
-        .def("DrawTexturedRect", &Overlay::DrawTexturedRect)
+        // ==== DrawTexture overloads ====
+        .def("DrawTexture",
+            static_cast<void(Overlay::*)(const std::string&, float, float)>(&Overlay::DrawTexture),
+            py::arg("path"),
+            py::arg("width") = 32.0f,
+            py::arg("height") = 32.0f)
+
+        .def("DrawTexture",
+            static_cast<void(Overlay::*)(const std::string&,
+                std::tuple<float, float>,
+                std::tuple<float, float>,
+                std::tuple<float, float>,
+                std::tuple<int, int, int, int>,
+                std::tuple<int, int, int, int>)>(&Overlay::DrawTexture),
+            py::arg("path"),
+            py::arg("size") = std::make_tuple(32.0f, 32.0f),
+            py::arg("uv0") = std::make_tuple(0.0f, 0.0f),
+            py::arg("uv1") = std::make_tuple(1.0f, 1.0f),
+            py::arg("tint") = std::make_tuple(255, 255, 255, 255),
+            py::arg("border_col") = std::make_tuple(0, 0, 0, 0))
+
+        // ==== DrawTexturedRect overloads ====
+        .def("DrawTexturedRect",
+            static_cast<void(Overlay::*)(float, float, float, float, const std::string&)>(&Overlay::DrawTexturedRect),
+            py::arg("x"),
+            py::arg("y"),
+            py::arg("width"),
+            py::arg("height"),
+            py::arg("texture_path"))
+
+        .def("DrawTexturedRect",
+            static_cast<void(Overlay::*)(std::tuple<float, float>,
+                std::tuple<float, float>,
+                const std::string&,
+                std::tuple<float, float>,
+                std::tuple<float, float>,
+                std::tuple<int, int, int, int>)>(&Overlay::DrawTexturedRect),
+            py::arg("pos"),
+            py::arg("size"),
+            py::arg("texture_path"),
+            py::arg("uv0") = std::make_tuple(0.0f, 0.0f),
+            py::arg("uv1") = std::make_tuple(1.0f, 1.0f),
+            py::arg("tint") = std::make_tuple(255, 255, 255, 255))
+
         .def("UpkeepTextures", &Overlay::UpkeepTextures)
-        .def("ImageButton", &Overlay::ImageButton, py::arg("caption"), py::arg("file_path"), py::arg("width") = 0.0f, py::arg("height") = 0.0f, py::arg("frame_padding") = -1);
+        .def("ImageButton",
+            static_cast<bool(Overlay::*)(const std::string&, const std::string&, float, float, int)>(&Overlay::ImageButton),
+            py::arg("caption"),
+            py::arg("file_path"),
+            py::arg("width") = 32.0f,
+            py::arg("height") = 32.0f,
+            py::arg("frame_padding") = 0)
+
+        .def("ImageButton",
+            static_cast<bool(Overlay::*)(const std::string&, const std::string&,
+                std::tuple<float, float>,
+                std::tuple<float, float>,
+                std::tuple<float, float>,
+                std::tuple<int, int, int, int>,
+                std::tuple<int, int, int, int>,
+                int)>(&Overlay::ImageButton),
+            py::arg("caption"),
+            py::arg("file_path"),
+            py::arg("size") = std::make_tuple(32.0f, 32.0f),
+            py::arg("uv0") = std::make_tuple(0.0f, 0.0f),
+            py::arg("uv1") = std::make_tuple(1.0f, 1.0f),
+            py::arg("bg_color") = std::make_tuple(0, 0, 0, 0),
+            py::arg("tint_color") = std::make_tuple(255, 255, 255, 255),
+            py::arg("frame_padding") = 0);
+
 }
 
 PYBIND11_EMBEDDED_MODULE(PyOverlay, m) {
@@ -1164,1232 +1121,3 @@ PYBIND11_EMBEDDED_MODULE(PyOverlay, m) {
     bind_overlay(m);
 }
 
-
-
-PYBIND11_EMBEDDED_MODULE(PyPathing, m) {
-    // Bind PathingTrapezoid
-    py::class_<PathingTrapezoid>(m, "PathingTrapezoid")
-        .def(py::init<>())  // Default constructor
-        .def_readwrite("id", &PathingTrapezoid::id)
-        .def_readwrite("XTL", &PathingTrapezoid::XTL)
-        .def_readwrite("XTR", &PathingTrapezoid::XTR)
-        .def_readwrite("YT", &PathingTrapezoid::YT)
-        .def_readwrite("XBL", &PathingTrapezoid::XBL)
-        .def_readwrite("XBR", &PathingTrapezoid::XBR)
-        .def_readwrite("YB", &PathingTrapezoid::YB)
-        .def_readwrite("portal_left", &PathingTrapezoid::portal_left)
-        .def_readwrite("portal_right", &PathingTrapezoid::portal_right)
-        .def_readwrite("neighbor_ids", &PathingTrapezoid::neighbor_ids);  // List of adjacent trapezoid IDs
-
-    // Bind Portal
-    py::class_<Portal>(m, "Portal")
-        .def(py::init<>())
-        .def_readwrite("left_layer_id", &Portal::left_layer_id)
-        .def_readwrite("right_layer_id", &Portal::right_layer_id)
-        .def_readwrite("h0004", &Portal::h0004)
-        .def_readwrite("pair_index", &Portal::pair_index)  // Paired portal index
-        .def_readwrite("trapezoid_indices", &Portal::trapezoid_indices);  // Vector of trapezoid IDs
-
-
-    // Bind Node as base class
-    py::class_<Node>(m, "Node")
-        .def(py::init<>())
-        .def_readwrite("type", &Node::type)
-        .def_readwrite("id", &Node::id);
-
-    // Bind XNode, YNode, and SinkNode as derived classes
-    py::class_<XNode, Node>(m, "XNode")
-        .def(py::init<>())
-        .def_readwrite("pos", &XNode::pos)   // Python-safe 2D position
-        .def_readwrite("dir", &XNode::dir)   // Direction vector
-        .def_readwrite("left_id", &XNode::left_id)
-        .def_readwrite("right_id", &XNode::right_id);
-
-    py::class_<YNode, Node>(m, "YNode")
-        .def(py::init<>())
-        .def_readwrite("pos", &YNode::pos)
-        .def_readwrite("left_id", &YNode::left_id)
-        .def_readwrite("right_id", &YNode::right_id);
-
-    py::class_<SinkNode, Node>(m, "SinkNode")
-        .def(py::init<>())
-        .def_readwrite("trapezoid_ids", &SinkNode::trapezoid_ids);  // List of trapezoid IDs
-
-    // Bind PathingMap
-    py::class_<PathingMap>(m, "PathingMap")
-        .def(py::init<>())  // Default constructor
-        .def_readwrite("zplane", &PathingMap::zplane)
-        .def_readwrite("h0004", &PathingMap::h0004)
-        .def_readwrite("h0008", &PathingMap::h0008)
-        .def_readwrite("h000C", &PathingMap::h000C)
-        .def_readwrite("h0010", &PathingMap::h0010)
-        .def_readwrite("trapezoids", &PathingMap::trapezoids)  // Vector of PathingTrapezoid
-        .def_readwrite("sink_nodes", &PathingMap::sink_nodes)  // Vector of SinkNode
-        .def_readwrite("x_nodes", &PathingMap::x_nodes)        // Vector of XNode
-        .def_readwrite("y_nodes", &PathingMap::y_nodes)        // Vector of YNode
-        .def_readwrite("h0034", &PathingMap::h0034)
-        .def_readwrite("h0038", &PathingMap::h0038)
-        .def_readwrite("portals", &PathingMap::portals)        // Vector of Portal
-        .def_readwrite("root_node_id", &PathingMap::root_node_id);
-
-    // Bind the GetPathingMaps function
-    m.def("get_map_boundaries", &GetMapBoundaries, "Retrieve map boundaries");
-    m.def("get_pathing_maps", &GetPathingMaps, "Retrieve and convert all pathing maps");
-	m.def("get_planned_path", &GetPlannedPath, "Get planned path from start to goal",
-		py::arg("start_x"), py::arg("start_y"), py::arg("start_z"),
-		py::arg("goal_x"), py::arg("goal_y"), py::arg("goal_z") = 0.0f);
-}
-
-PyCamera::PyCamera() {
-	GetContext();
-}
-
-void PyCamera::ResetContext() {
-
-	look_at_agent_id = 0;
-	h0004 = 0;
-	h0008 = 0;
-	h000C = 0;
-	max_distance = 0;
-	h0014 = 0;
-	yaw = 0;
-	current_yaw = 0;
-	pitch = 0;
-	camera_zoom = 0;
-	h0024.clear();
-	h0024.resize(4, 0);
-	yaw_right_click = 0;
-	yaw_right_click2 = 0;
-	pitch_right_click = 0;
-	distance2 = 0;
-	acceleration_constant = 0;
-	time_since_last_keyboard_rotation = 0;
-	time_since_last_mouse_rotation = 0;
-	time_since_last_mouse_move = 0;
-	time_since_last_agent_selection = 0;
-	time_in_the_map = 0;
-	time_in_the_district = 0;
-	yaw_to_go = 0;
-	pitch_to_go = 0;
-	dist_to_go = 0;
-	max_distance2 = 0;
-	h0070.clear();
-	h0070.resize(2, 0);
-	position.x = position.y = position.z = camera_pos_to_go.x =
-		camera_pos_to_go.y =
-		camera_pos_to_go.z =
-		cam_pos_inverted.x =
-		cam_pos_inverted.y =
-		cam_pos_inverted.z =
-		cam_pos_inverted_to_go.x =
-		cam_pos_inverted_to_go.y =
-		cam_pos_inverted_to_go.z =
-		look_at_target.x =
-		look_at_target.y =
-		look_at_target.z =
-		look_at_to_go.x =
-		look_at_to_go.y =
-		look_at_to_go.z =
-		field_of_view =
-		field_of_view2 = -1.0f;
-}
-
-void PyCamera::GetContext() {
-    auto instance_type = GW::Map::GetInstanceType();
-    bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (!GW::Map::GetIsObserving()) && (instance_type != GW::Constants::InstanceType::Loading);
-
-    if (!is_map_ready) {
-        ResetContext();
-        return;
-    }
-
-    const auto camera = GW::CameraMgr::GetCamera();
-	look_at_agent_id = camera->look_at_agent_id;
-	h0004 = camera->h0004;
-	h0008 = camera->h0008;
-	h000C = camera->h000C;
-	max_distance = camera->max_distance;
-	h0014 = camera->h0014;
-	yaw = camera->yaw;
-	current_yaw = camera->GetCurrentYaw();
-	pitch = camera->pitch;
-	camera_zoom = camera->distance;
-	h0024.push_back(camera->h0024[0]);
-	h0024.push_back(camera->h0024[1]);
-	h0024.push_back(camera->h0024[2]);
-	h0024.push_back(camera->h0024[3]);
-	yaw_right_click = camera->yaw_right_click;
-	yaw_right_click2 = camera->yaw_right_click2;
-	pitch_right_click = camera->pitch_right_click;
-	distance2 = camera->distance2;
-	acceleration_constant = camera->acceleration_constant;
-	time_since_last_keyboard_rotation = camera->time_since_last_keyboard_rotation;
-	time_since_last_mouse_rotation = camera->time_since_last_mouse_rotation;
-	time_since_last_mouse_move = camera->time_since_last_mouse_move;
-	time_since_last_agent_selection = camera->time_since_last_agent_selection;
-	time_in_the_map = camera->time_in_the_map;
-	time_in_the_district = camera->time_in_the_district;
-	yaw_to_go = camera->yaw_to_go;
-	pitch_to_go = camera->pitch_to_go;
-	dist_to_go = camera->dist_to_go;
-	max_distance2 = camera->max_distance2;
-	h0070.push_back(camera->h0070[0]);
-	h0070.push_back(camera->h0070[1]);
-	position = Point3D(camera->position.x, camera->position.y, camera->position.z);
-	camera_pos_to_go = Point3D(camera->camera_pos_to_go.x, camera->camera_pos_to_go.y, camera->camera_pos_to_go.z);
-	cam_pos_inverted = Point3D(camera->cam_pos_inverted.x, camera->cam_pos_inverted.y, camera->cam_pos_inverted.z);
-	cam_pos_inverted_to_go = Point3D(camera->cam_pos_inverted_to_go.x, camera->cam_pos_inverted_to_go.y, camera->cam_pos_inverted_to_go.z);
-	look_at_target = Point3D(camera->look_at_target.x, camera->look_at_target.y, camera->look_at_target.z);
-	look_at_to_go = Point3D(camera->look_at_to_go.x, camera->look_at_to_go.y, camera->look_at_to_go.z);
-	field_of_view = camera->field_of_view;
-	field_of_view2 = camera->field_of_view2;
-}
-
-void PyCamera::SetYaw(float _yaw) {
-    GW::GameThread::Enqueue([_yaw] {
-        const auto camera = GW::CameraMgr::GetCamera();
-        camera->SetYaw(_yaw);
-        });
-    
-}
-
-void PyCamera::SetPitch(float _pitch) {
-	GW::GameThread::Enqueue([_pitch] {
-		const auto camera = GW::CameraMgr::GetCamera();
-		camera->SetPitch(_pitch);
-		});
-}
-
-void PyCamera::SetCameraPos(float x, float y, float z) {
-	GW::GameThread::Enqueue([x, y, z] {
-		const auto camera = GW::CameraMgr::GetCamera();
-		camera->position = GW::Vec3f(x, y, z);
-		});
-}
-
-void PyCamera::SetLookAtTarget(float x, float y, float z) {
-	GW::GameThread::Enqueue([x, y, z] {
-		const auto camera = GW::CameraMgr::GetCamera();
-		camera->look_at_target = GW::Vec3f(x, y, z);
-		});
-}
-
-void PyCamera::SetMaxDist(float dist) {
-	GW::GameThread::Enqueue([dist] {
-        GW::CameraMgr::SetMaxDist(dist);
-		});
-}
-
-void PyCamera::SetFieldOfView(float fov) {
-	GW::GameThread::Enqueue([fov] {
-		GW::CameraMgr::SetFieldOfView(fov);
-
-		});
-}
-
-void PyCamera::UnlockCam(bool unlock) {
-	GW::GameThread::Enqueue([unlock] {
-		GW::CameraMgr::UnlockCam(unlock);
-		});
-}
-
-bool PyCamera::GetCameraUnlock() {
-	return GW::CameraMgr::GetCameraUnlock();
-}
-
-void PyCamera::SetFog(bool fog) {
-	GW::GameThread::Enqueue([fog] {
-		GW::CameraMgr::SetFog(fog);
-		});
-}
-
-void PyCamera::ForwardMovement(float amount, bool true_fordward) {
-	GW::GameThread::Enqueue([amount, true_fordward] {
-		GW::CameraMgr::ForwardMovement(amount, true_fordward);
-		});
-}
-
-void PyCamera::VerticalMovement(float amount) {
-	GW::GameThread::Enqueue([amount] {
-		GW::CameraMgr::VerticalMovement(amount);
-		});
-}
-
-void PyCamera::SideMovement(float amount) {
-	GW::GameThread::Enqueue([amount] {
-		GW::CameraMgr::SideMovement(amount);
-		});
-}
-
-void PyCamera::RotateMovement(float angle) {
-	GW::GameThread::Enqueue([angle] {
-		GW::CameraMgr::RotateMovement(angle);
-		});
-}
-
-Point3D PyCamera::ComputeCameraPos() {
-	auto  camera_pos = GW::CameraMgr::ComputeCamPos();
-	return Point3D(camera_pos.x, camera_pos.y, camera_pos.z);
-}
-
-void PyCamera::UpdateCameraPos() {
-	GW::GameThread::Enqueue([] {
-		GW::CameraMgr::UpdateCameraPos();
-		});
-}
-
-void bind_camera(py::module_& m) {
-    py::class_<PyCamera>(m, "PyCamera")
-        .def(py::init<>())  // default constructor
-
-        // Read/write fields
-        .def_readwrite("look_at_agent_id", &PyCamera::look_at_agent_id)
-        .def_readwrite("yaw", &PyCamera::yaw)
-        .def_readwrite("pitch", &PyCamera::pitch)
-        .def_readwrite("camera_zoom", &PyCamera::camera_zoom)
-        .def_readwrite("max_distance", &PyCamera::max_distance)
-        .def_readwrite("yaw_right_click", &PyCamera::yaw_right_click)
-        .def_readwrite("yaw_right_click2", &PyCamera::yaw_right_click2)
-        .def_readwrite("pitch_right_click", &PyCamera::pitch_right_click)
-        .def_readwrite("distance2", &PyCamera::distance2)
-        .def_readwrite("acceleration_constant", &PyCamera::acceleration_constant)
-        .def_readwrite("time_since_last_keyboard_rotation", &PyCamera::time_since_last_keyboard_rotation)
-        .def_readwrite("time_since_last_mouse_rotation", &PyCamera::time_since_last_mouse_rotation)
-        .def_readwrite("time_since_last_mouse_move", &PyCamera::time_since_last_mouse_move)
-        .def_readwrite("time_since_last_agent_selection", &PyCamera::time_since_last_agent_selection)
-        .def_readwrite("time_in_the_map", &PyCamera::time_in_the_map)
-        .def_readwrite("time_in_the_district", &PyCamera::time_in_the_district)
-        .def_readwrite("yaw_to_go", &PyCamera::yaw_to_go)
-        .def_readwrite("pitch_to_go", &PyCamera::pitch_to_go)
-        .def_readwrite("dist_to_go", &PyCamera::dist_to_go)
-        .def_readwrite("max_distance2", &PyCamera::max_distance2)
-        .def_readwrite("field_of_view", &PyCamera::field_of_view)
-        .def_readwrite("field_of_view2", &PyCamera::field_of_view2)
-        .def_readwrite("h0024", &PyCamera::h0024)
-        .def_readwrite("h0070", &PyCamera::h0070)
-        .def_readwrite("position", &PyCamera::position)
-        .def_readwrite("camera_pos_to_go", &PyCamera::camera_pos_to_go)
-        .def_readwrite("cam_pos_inverted", &PyCamera::cam_pos_inverted)
-        .def_readwrite("cam_pos_inverted_to_go", &PyCamera::cam_pos_inverted_to_go)
-        .def_readwrite("look_at_target", &PyCamera::look_at_target)
-        .def_readwrite("look_at_to_go", &PyCamera::look_at_to_go)
-
-        // Methods (bound instance)
-		.def("GetContext", &PyCamera::GetContext)
-        .def("SetYaw", &PyCamera::SetYaw, py::arg("_yaw"))
-        .def("SetPitch", &PyCamera::SetPitch, py::arg("_pitch"))
-        .def("SetMaxDist", &PyCamera::SetMaxDist, py::arg("dist"))
-        .def("SetFieldOfView", &PyCamera::SetFieldOfView, py::arg("fov"))
-        .def("UnlockCam", &PyCamera::UnlockCam, py::arg("unlock"))
-        .def("GetCameraUnlock", &PyCamera::GetCameraUnlock)
-        .def("ForwardMovement", &PyCamera::ForwardMovement, py::arg("amount"), py::arg("true_forward"))
-        .def("VerticalMovement", &PyCamera::VerticalMovement, py::arg("amount"))
-        .def("SideMovement", &PyCamera::SideMovement, py::arg("amount"))
-        .def("RotateMovement", &PyCamera::RotateMovement, py::arg("angle"))
-        .def("ComputeCameraPos", &PyCamera::ComputeCameraPos)
-        .def("UpdateCameraPos", &PyCamera::UpdateCameraPos)
-        .def("SetCameraPos", &PyCamera::SetCameraPos, py::arg("x"), py::arg("y"), py::arg("z"))
-        .def("SetLookAtTarget", &PyCamera::SetLookAtTarget, py::arg("x"), py::arg("y"), py::arg("z"));
-}
-
-
-PYBIND11_EMBEDDED_MODULE(PyCamera, m) {
-    bind_camera(m);
-}
-
-using namespace DirectX;
-
-void Py2DRenderer::set_primitives(const std::vector<std::vector<Point2D>>& prims, D3DCOLOR draw_color) {
-    primitives = prims;
-    color = draw_color;
-}
-
-void Py2DRenderer::set_world_zoom_x(float zoom) { world_zoom_x = zoom; }
-void Py2DRenderer::set_world_zoom_y(float zoom) { world_zoom_y = zoom; }
-void Py2DRenderer::set_world_pan(float x, float y) { world_pan_x = x; world_pan_y = y; }
-void Py2DRenderer::set_world_rotation(float r) { world_rotation = r; }
-void Py2DRenderer::set_world_space(bool enabled) { world_space = enabled; }
-void Py2DRenderer::set_world_scale(float x) { world_scale = x; }
-
-void Py2DRenderer::set_screen_offset(float x, float y) { screen_offset_x = x; screen_offset_y = y; }
-void Py2DRenderer::set_screen_zoom_x(float zoom) { screen_zoom_x = zoom; }
-void Py2DRenderer::set_screen_zoom_y(float zoom) { screen_zoom_y = zoom; }
-void Py2DRenderer::set_screen_rotation(float r) { screen_rotation = r; }
-
-void Py2DRenderer::set_circular_mask(bool enabled) { use_circular_mask = enabled; }
-void Py2DRenderer::set_circular_mask_radius(float radius) { mask_radius = radius; }
-void Py2DRenderer::set_circular_mask_center(float x, float y) { mask_center_x = x; mask_center_y = y; }
-
-void Py2DRenderer::set_rectangle_mask(bool enabled) { use_rectangle_mask = enabled; }
-void Py2DRenderer::set_rectangle_mask_bounds(float x, float y, float width, float height) {
-	mask_rect_x = x;
-	mask_rect_y = y;
-	mask_rect_width = width;
-    mask_rect_height = height;
-}
-
-void Py2DRenderer::SetupProjection() {
-    if (!g_d3d_device) return;
-
-    D3DVIEWPORT9 vp;
-    g_d3d_device->GetViewport(&vp);
-
-    float w = 5000.0f * 2;
-
-    XMMATRIX ortho(
-        2.0f / w, 0, 0, 0,
-        0, 2.0f / w, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    );
-
-    //float xscale = 1.0f;
-    //float yscale = static_cast<float>(vp.Width) / static_cast<float>(vp.Height);
-
-    float xscale = world_scale;
-    float yscale = (static_cast<float>(vp.Width) / static_cast<float>(vp.Height)) * world_scale;
-
-
-    float xtrans = static_cast<float>(0); // optional pan offset
-    float ytrans = static_cast<float>(0); // optional pan offset
-
-    XMMATRIX vp_matrix(
-        xscale, 0, 0, 0,
-        0, yscale, 0, 0,
-        0, 0, 1, 0,
-        xtrans, ytrans, 0, 1
-    );
-
-    XMMATRIX proj = ortho * vp_matrix;
-
-    g_d3d_device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&proj));
-}
-
-void Py2DRenderer::ApplyStencilMask() {
-    if (!g_d3d_device) return;
-
-    auto FillRect = [](float x, float y, float w, float h, D3DCOLOR color) {
-        D3DVertex vertices[4] = {
-            {x,     y,     0.0f, 1.0f, color},
-            {x + w, y,     0.0f, 1.0f, color},
-            {x,     y + h, 0.0f, 1.0f, color},
-            {x + w, y + h, 0.0f, 1.0f, color}
-        };
-        g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-        g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
-        };
-
-    auto FillCircle = [](float x, float y, float radius, D3DCOLOR color, unsigned resolution = 192u) {
-        D3DVertex vertices[193];
-        for (unsigned i = 0; i <= resolution; ++i) {
-            float angle = static_cast<float>(i) / resolution * XM_2PI;
-            vertices[i] = {
-                x + radius * cosf(angle),
-                y + radius * sinf(angle),
-                0.0f,
-                1.0f,
-                color
-            };
-        }
-        g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-        g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, resolution, vertices, sizeof(D3DVertex));
-        };
-
-    g_d3d_device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
-    g_d3d_device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
-    g_d3d_device->Clear(0, nullptr, D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0);
-
-    g_d3d_device->SetRenderState(D3DRS_STENCILREF, 1);
-    g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-    g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-
-    if (use_circular_mask)
-        FillCircle(mask_center_x, mask_center_y, mask_radius, D3DCOLOR_ARGB(0, 0, 0, 0));
-    else if (use_rectangle_mask)
-        FillRect(mask_rect_x, mask_rect_y, mask_rect_width, mask_rect_height, D3DCOLOR_ARGB(0, 0, 0, 0));
-    else
-        FillRect(-5000.0f, -5000.0f, 10000.0f, 10000.0f, D3DCOLOR_ARGB(0, 0, 0, 0));
-
-    g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
-    g_d3d_device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-    g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-}
-
-void Py2DRenderer::ResetStencilMask() {
-    if (!g_d3d_device) return;
-    g_d3d_device->SetRenderState(D3DRS_STENCILREF, 0);
-    g_d3d_device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
-    g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
-    g_d3d_device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-    g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-    g_d3d_device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-}
-
-
-void Py2DRenderer::render() {
-    if (!g_d3d_device || primitives.empty()) return;
-
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (FAILED(g_d3d_device->CreateStateBlock(D3DSBT_ALL, &state_block))) return;
-
-    D3DMATRIX old_world, old_view, old_proj;
-    g_d3d_device->GetTransform(D3DTS_WORLD, &old_world);
-    g_d3d_device->GetTransform(D3DTS_VIEW, &old_view);
-    g_d3d_device->GetTransform(D3DTS_PROJECTION, &old_proj);
-
-    if (world_space) {
-        SetupProjection();
-        D3DVIEWPORT9 vp;
-        g_d3d_device->GetViewport(&vp);
-
-        // World width used in projection
-        float world_width = 5000.0f * 2.0f;
-
-        auto translate = XMMatrixTranslation(-world_pan_x, -world_pan_y, 0);
-        auto rotateZ = XMMatrixRotationZ(world_rotation);
-        auto zoom = XMMatrixScaling(world_zoom_x, world_zoom_y, 1.0f);
-        auto scale = XMMatrixScaling(world_scale, world_scale, 1.0f);
-        auto flipY = XMMatrixScaling(1.0f, -1.0f, 1.0f); //flip happens HERE
-
-        auto view = translate * rotateZ * scale * flipY * zoom;
-
-
-        g_d3d_device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
-        g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    }
-    else {
-        g_d3d_device->SetTransform(D3DTS_VIEW, &old_view);
-        g_d3d_device->SetTransform(D3DTS_PROJECTION, &old_proj);
-        g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-    }
-
-    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-    g_d3d_device->SetIndices(nullptr);
-    g_d3d_device->SetFVF(D3DFVF_CUSTOMVERTEX);
-    g_d3d_device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
-    g_d3d_device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-    g_d3d_device->SetPixelShader(nullptr);
-    g_d3d_device->SetVertexShader(nullptr);
-    g_d3d_device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    g_d3d_device->SetRenderState(D3DRS_LIGHTING, false);
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, false);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-    g_d3d_device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
-    g_d3d_device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-    g_d3d_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-    g_d3d_device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    g_d3d_device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-
-    auto FillRect = [](float x, float y, float w, float h, D3DCOLOR color) {
-        if (!g_d3d_device) return;
-        D3DVertex vertices[4] = {
-            {x,     y,     0.0f, 1.0f, color},
-            {x + w, y,     0.0f, 1.0f, color},
-            {x,     y + h, 0.0f, 1.0f, color},
-            {x + w, y + h, 0.0f, 1.0f, color}
-        };
-        g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-        g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
-        };
-
-    auto FillCircle = [](float x, float y, float radius, D3DCOLOR color, unsigned resolution = 192u) {
-        if (!g_d3d_device) return;
-        D3DVertex vertices[193];
-        for (unsigned i = 0; i <= resolution; ++i) {
-            float angle = static_cast<float>(i) / resolution * XM_2PI;
-            vertices[i] = {
-                x + radius * cosf(angle),
-                y + radius * sinf(angle),
-                0.0f,
-                1.0f,
-                color
-            };
-        }
-        g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, resolution, vertices, sizeof(D3DVertex));
-        };
-
-    g_d3d_device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-
-    if (use_circular_mask) {
-        g_d3d_device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
-        g_d3d_device->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
-        g_d3d_device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
-        g_d3d_device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
-        g_d3d_device->SetRenderState(D3DRS_STENCILREF, 1);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-
-        FillCircle(mask_center_x, mask_center_y, mask_radius, D3DCOLOR_ARGB(0, 0, 0, 0));
-
-        g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-        g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-    }
-	else if (use_rectangle_mask) {
-        g_d3d_device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
-        g_d3d_device->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
-        g_d3d_device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
-        g_d3d_device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
-        g_d3d_device->SetRenderState(D3DRS_STENCILREF, 1);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-
-        FillRect(mask_rect_x, mask_rect_y, mask_rect_width, mask_rect_height, D3DCOLOR_ARGB(0, 0, 0, 0));
-
-        // Set stencil test to only draw where the rect was filled
-        g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-        g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-    }
-    else {
-        FillRect(-5000.0f, -5000.0f, 10000.0f, 10000.0f, D3DCOLOR_ARGB(0, 0, 0, 0));
-    }
-
-    float cos_r = cosf(world_rotation);
-    float sin_r = sinf(world_rotation);
-
-    for (const auto& shape : primitives) {
-        if (shape.size() != 3 && shape.size() != 4) continue;
-
-        D3DVertex verts[4];
-        for (size_t i = 0; i < shape.size(); ++i) {
-            float x = shape[i].x;
-            float y = shape[i].y;
-
-            float x_out = x, y_out = y;
-            if (world_space) {
-                x_out = x * cos_r - y * sin_r;
-                y_out = x * sin_r + y * cos_r;
-
-                x_out *= world_scale;
-                y_out *= world_scale;
-
-                x_out = x_out * world_zoom_x + world_pan_x + screen_offset_x;
-                y_out = y_out * world_zoom_y + world_pan_y + screen_offset_y;
-            }
-
-            verts[i] = {
-                x_out, y_out, 0.0f, 1.0f, color
-            };
-        }
-
-        if (shape.size() == 4)
-            g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(D3DVertex));
-        else
-            g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 1, verts, sizeof(D3DVertex));
-    }
-
-    if (use_circular_mask || use_rectangle_mask) {
-        g_d3d_device->SetRenderState(D3DRS_STENCILREF, 0);
-        g_d3d_device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
-        g_d3d_device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-        g_d3d_device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-        g_d3d_device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-    }
-
-    g_d3d_device->SetTransform(D3DTS_WORLD, &old_world);
-    g_d3d_device->SetTransform(D3DTS_VIEW, &old_view);
-    g_d3d_device->SetTransform(D3DTS_PROJECTION, &old_proj);
-
-    state_block->Apply();
-    state_block->Release();
-}
-
-void Py2DRenderer::DrawLine(Point2D from, Point2D to, D3DCOLOR color, float thickness) {
-    if (!g_d3d_device) return;
-
-    // Ensure 2D screen-space rendering is not affected by Z-buffer
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-    if (thickness <= 1.0f) {
-        D3DVertex verts[] = {
-            { float(from.x), float(from.y), 0.0f, 1.0f, color },
-            { float(to.x),   float(to.y),   0.0f, 1.0f, color }
-        };
-        g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-        g_d3d_device->DrawPrimitiveUP(D3DPT_LINELIST, 1, verts, sizeof(D3DVertex));
-        return;
-    }
-
-    float dx = to.x - from.x;
-    float dy = to.y - from.y;
-    float len = sqrtf(dx * dx + dy * dy);
-    if (len == 0.0f) return;
-
-    float nx = -dy / len;
-    float ny = dx / len;
-    float half = thickness * 0.5f;
-
-    D3DVertex quad[] = {
-        { from.x - nx * half, from.y - ny * half, 0.0f, 1.0f, color },
-        { from.x + nx * half, from.y + ny * half, 0.0f, 1.0f, color },
-        { to.x - nx * half, to.y - ny * half, 0.0f, 1.0f, color },
-        { to.x + nx * half, to.y + ny * half, 0.0f, 1.0f, color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(D3DVertex));
-}
-
-
-void Py2DRenderer::DrawTriangle(Point2D p1, Point2D p2, Point2D p3, D3DCOLOR color, float thickness) {
-    DrawLine(p1, p2, color, thickness);
-    DrawLine(p2, p3, color, thickness);
-    DrawLine(p3, p1, color, thickness);
-}
-
-void Py2DRenderer::DrawTriangleFilled(Point2D p1, Point2D p2, Point2D p3, D3DCOLOR color) {
-    // Ensure 2D screen-space rendering is not affected by Z-buffer
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-    D3DVertex verts[] = {
-        { float(p1.x), float(p1.y), 0.0f, 1.0f, color },
-        { float(p2.x), float(p2.y), 0.0f, 1.0f, color },
-        { float(p3.x), float(p3.y), 0.0f, 1.0f, color }
-    };
-    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 1, verts, sizeof(D3DVertex));
-}
-
-
-void Py2DRenderer::DrawQuad(Point2D p1, Point2D p2, Point2D p3, Point2D p4, D3DCOLOR color, float thickness) {
-    DrawLine(p1, p2, color, thickness);
-    DrawLine(p2, p3, color, thickness);
-    DrawLine(p3, p4, color, thickness);
-    DrawLine(p4, p1, color, thickness);
-}
-
-
-void Py2DRenderer::DrawQuadFilled(Point2D p1, Point2D p2, Point2D p3, Point2D p4, D3DCOLOR color) {
-    // Ensure 2D screen-space rendering is not affected by Z-buffer
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-    D3DVertex verts[6] = {
-        { float(p1.x), float(p1.y), 0.0f, 1.0f, color },
-        { float(p2.x), float(p2.y), 0.0f, 1.0f, color },
-        { float(p3.x), float(p3.y), 0.0f, 1.0f, color },
-        { float(p3.x), float(p3.y), 0.0f, 1.0f, color },
-        { float(p4.x), float(p4.y), 0.0f, 1.0f, color },
-        { float(p1.x), float(p1.y), 0.0f, 1.0f, color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, verts, sizeof(D3DVertex));
-}
-
-
-void Py2DRenderer::DrawPoly(Point2D center, float radius, D3DCOLOR color, int segments, float thickness) {
-    float step = 2.0f * 3.141592654 / segments;
-    for (int i = 0; i < segments; ++i) {
-        float a0 = step * i;
-        float a1 = step * (i + 1);
-        Point2D p1(center.x + cosf(a0) * radius, center.y + sinf(a0) * radius);
-        Point2D p2(center.x + cosf(a1) * radius, center.y + sinf(a1) * radius);
-        DrawLine(p1, p2, color, thickness);
-    }
-}
-
-void Py2DRenderer::DrawPolyFilled(Point2D center, float radius, D3DCOLOR color, int segments) {
-    // Ensure 2D screen-space rendering is not affected by Z-buffer
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_d3d_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-    std::vector<D3DVertex> verts;
-    verts.emplace_back(D3DVertex{ static_cast<float>(center.x), static_cast<float>(center.y), 0.0f, 1.0f, color });
-
-    float step = 2.0f * 3.141592654 / segments;
-    for (int i = 0; i <= segments; ++i) {
-        float angle = step * i;
-        float x = center.x + cosf(angle) * radius;
-        float y = center.y + sinf(angle) * radius;
-        verts.emplace_back(D3DVertex{ x, y, 0.0f, 1.0f, color });
-    }
-
-    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, segments, verts.data(), sizeof(D3DVertex));
-}
-
-
-void Py2DRenderer::Setup3DView() {
-    if (!g_d3d_device) return;
-
-    // Lighting and blending
-    g_d3d_device->SetRenderState(D3DRS_LIGHTING, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-    g_d3d_device->SetRenderState(D3DRS_AMBIENT, 0xFFFFFFFF);
-
-    // Depth testing
-    g_d3d_device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-    g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    g_d3d_device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-
-    auto* cam = GW::CameraMgr::GetCamera();
-    if (!cam) return;
-
-    // Right-handed camera vectors (flip Z)
-    D3DXVECTOR3 eye(cam->position.x, cam->position.y, -cam->position.z);
-    D3DXVECTOR3 at(cam->look_at_target.x, cam->look_at_target.y, -cam->look_at_target.z);
-    D3DXVECTOR3 up(0.0f, 0.0f, 1.0f); // RH: Z+ is up
-
-    D3DXMATRIX view;
-    D3DXMatrixLookAtRH(&view, &eye, &at, &up);
-    g_d3d_device->SetTransform(D3DTS_VIEW, &view);
-
-    float fov = GW::Render::GetFieldOfView();
-    float aspect = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
-    float near_plane = 48000.0f / 1024.0f;
-    float far_plane = 48000.0f;
-
-    D3DXMATRIX proj;
-    D3DXMatrixPerspectiveFovRH(&proj, fov, aspect, near_plane, far_plane);
-    g_d3d_device->SetTransform(D3DTS_PROJECTION, &proj);
-
-    //Set identity world transform
-    D3DXMATRIX identity;
-    D3DXMatrixIdentity(&identity);
-    g_d3d_device->SetTransform(D3DTS_WORLD, &identity);
-   
-}
-
-
-void Py2DRenderer::DrawLine3D(Point3D from, Point3D to, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-
-    Setup3DView();
-
-	if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-	}
-
-    // Flip Z to match RH system (because the view/projection flips Z)
-    from.z = -from.z;
-    to.z = -to.z;
-
-    struct D3DVertex3D {
-        float x, y, z;
-        D3DCOLOR color;
-    };
-
-    D3DVertex3D verts[] = {
-        { from.x, from.y, from.z, color },
-        { to.x,   to.y,   to.z,   color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_LINELIST, 1, verts, sizeof(D3DVertex3D));
-}
-
-void Py2DRenderer::DrawTriangle3D(Point3D p1, Point3D p2, Point3D p3, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    struct D3DVertex3D { float x, y, z; D3DCOLOR color; };
-    D3DVertex3D verts[] = {
-        { p1.x, p1.y, -p1.z, color },
-        { p2.x, p2.y, -p2.z, color },
-        { p3.x, p3.y, -p3.z, color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_LINESTRIP, 2, verts, sizeof(D3DVertex3D));
-    g_d3d_device->DrawPrimitiveUP(D3DPT_LINELIST, 1, &verts[2], sizeof(D3DVertex3D));
-}
-
-void Py2DRenderer::DrawTriangleFilled3D(Point3D p1, Point3D p2, Point3D p3, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    struct D3DVertex3D { float x, y, z; D3DCOLOR color; };
-    D3DVertex3D verts[] = {
-        { p1.x, p1.y, -p1.z, color },
-        { p2.x, p2.y, -p2.z, color },
-        { p3.x, p3.y, -p3.z, color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 1, verts, sizeof(D3DVertex3D));
-}
-
-void Py2DRenderer::DrawQuad3D(Point3D p1, Point3D p2, Point3D p3, Point3D p4, D3DCOLOR color, bool use_occlusion) {
-    DrawTriangle3D(p1, p2, p3, color, use_occlusion);
-    DrawTriangle3D(p3, p4, p1, color, use_occlusion);
-}
-
-void Py2DRenderer::DrawQuadFilled3D(Point3D p1, Point3D p2, Point3D p3, Point3D p4, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    struct D3DVertex3D { float x, y, z; D3DCOLOR color; };
-    D3DVertex3D verts[] = {
-        { p1.x, p1.y, -p1.z, color },
-        { p2.x, p2.y, -p2.z, color },
-        { p3.x, p3.y, -p3.z, color },
-        { p3.x, p3.y, -p3.z, color },
-        { p4.x, p4.y, -p4.z, color },
-        { p1.x, p1.y, -p1.z, color }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, verts, sizeof(D3DVertex3D));
-}
-
-void Py2DRenderer::DrawPoly3D(Point3D center, float radius, D3DCOLOR color, int segments, bool autoZ, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    struct D3DVertex3D { float x, y, z; D3DCOLOR color; };
-
-    std::vector<Point3D> points;
-    const float step = XM_2PI / segments;
-    for (int i = 0; i <= segments; ++i) {
-        float angle = step * i;
-        float x = center.x + cosf(angle) * radius;
-        float y = center.y + sinf(angle) * radius;
-        float z = autoZ ? overlay.findZ(x, y, center.z) : center.z;
-        points.push_back({ x, y, z });
-    }
-
-    for (int i = 0; i < segments; ++i) {
-        D3DVertex3D verts[] = {
-            { points[i].x, points[i].y, -points[i].z, color },
-            { points[i + 1].x, points[i + 1].y, -points[i + 1].z, color }
-        };
-        g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-        g_d3d_device->DrawPrimitiveUP(D3DPT_LINELIST, 1, verts, sizeof(D3DVertex3D));
-    }
-}
-
-void Py2DRenderer::DrawPolyFilled3D(Point3D center, float radius, D3DCOLOR color, int segments, bool autoZ, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    struct D3DVertex3D { float x, y, z; D3DCOLOR color; };
-
-    std::vector<D3DVertex3D> verts;
-    verts.push_back({ center.x, center.y, -center.z, color }); // center of the fan
-
-    const float step = XM_2PI / segments;
-    for (int i = 0; i <= segments; ++i) {
-        float angle = step * i;
-        float x = center.x + cosf(angle) * radius;
-        float y = center.y + sinf(angle) * radius;
-        float z = autoZ ? overlay.findZ(x, y, center.z) : center.z;
-        verts.push_back({ x, y, -z, color });
-    }
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, segments, verts.data(), sizeof(D3DVertex3D));
-}
-
-void Py2DRenderer::DrawCubeOutline(Point3D center, float size, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    float h = size * 0.5f;
-
-    Point3D c[8] = {
-        {center.x - h, center.y - h, center.z - h},
-        {center.x + h, center.y - h, center.z - h},
-        {center.x + h, center.y + h, center.z - h},
-        {center.x - h, center.y + h, center.z - h},
-        {center.x - h, center.y - h, center.z + h},
-        {center.x + h, center.y - h, center.z + h},
-        {center.x + h, center.y + h, center.z + h},
-        {center.x - h, center.y + h, center.z + h}
-    };
-
-    const int edges[12][2] = {
-        {0,1},{1,2},{2,3},{3,0},
-        {4,5},{5,6},{6,7},{7,4},
-        {0,4},{1,5},{2,6},{3,7}
-    };
-
-    for (int i = 0; i < 12; ++i) {
-        DrawLine3D(c[edges[i][0]], c[edges[i][1]], color, use_occlusion);
-    }
-}
-
-void Py2DRenderer::DrawCubeFilled(Point3D center, float size, D3DCOLOR color, bool use_occlusion) {
-    if (!g_d3d_device) return;
-    Setup3DView();
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    float h = size * 0.5f;
-
-    Point3D c[8] = {
-        {center.x - h, center.y - h, center.z - h},
-        {center.x + h, center.y - h, center.z - h},
-        {center.x + h, center.y + h, center.z - h},
-        {center.x - h, center.y + h, center.z - h},
-        {center.x - h, center.y - h, center.z + h},
-        {center.x + h, center.y - h, center.z + h},
-        {center.x + h, center.y + h, center.z + h},
-        {center.x - h, center.y + h, center.z + h}
-    };
-
-    const int faces[6][4] = {
-        {0,1,2,3}, // back
-        {4,5,6,7}, // front
-        {0,1,5,4}, // bottom
-        {2,3,7,6}, // top
-        {1,2,6,5}, // right
-        {0,3,7,4}  // left
-    };
-
-    for (int i = 0; i < 6; ++i) {
-        DrawQuadFilled3D(c[faces[i][0]], c[faces[i][1]], c[faces[i][2]], c[faces[i][3]], color, use_occlusion);
-    }
-}
-
-void Py2DRenderer::DrawTexture(const std::string& file_path, float screen_pos_x, float screen_pos_y, float width, float height, uint32_t int_tint) {
-	D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
-	tint = 0xFFFFFFFF; // Force full opacity for 2D textures
-    
-    if (!g_d3d_device) return;
-
-    std::wstring wpath(file_path.begin(), file_path.end());
-    LPDIRECT3DTEXTURE9 texture = overlay.texture_manager.GetTexture(wpath);
-    if (!texture) return;
-
-    float w = width * 0.5f;
-    float h = height * 0.5f;
-
-    struct Vertex {
-        float x, y, z, rhw;
-        float u, v;
-        D3DCOLOR color;
-    };
-
-    Vertex quad[] = {
-        { screen_pos_x - w, screen_pos_y - h, 0.0f, 1.0f, 0.0f, 0.0f, tint },
-        { screen_pos_x + w, screen_pos_y - h, 0.0f, 1.0f, 1.0f, 0.0f, tint },
-        { screen_pos_x + w, screen_pos_y + h, 0.0f, 1.0f, 1.0f, 1.0f, tint },
-        { screen_pos_x - w, screen_pos_y + h, 0.0f, 1.0f, 0.0f, 1.0f, tint },
-    };
-
-    // Set render states for textures
-    g_d3d_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
-    g_d3d_device->SetTexture(0, texture);
-
-    // Set texture blending
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    g_d3d_device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, quad, sizeof(Vertex));
-}
-
-
-void Py2DRenderer::DrawTexture3D(const std::string& file_path,float world_pos_x, float world_pos_y, float world_pos_z, float width, float height, bool use_occlusion, uint32_t int_tint) {
-	D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
-    tint = 0xFFFFFFFF;
-
-    if (!g_d3d_device) return;
-
-    std::wstring wpath(file_path.begin(), file_path.end());
-    LPDIRECT3DTEXTURE9 texture = overlay.texture_manager.GetTexture(wpath);
-    if (!texture) return;
-
-    Setup3DView();
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    // Flip Z to match RH coordinate system
-    world_pos_z = -world_pos_z;
-
-    float w = width / 2.0f;
-    float h = height / 2.0f;
-
-    struct D3DTexturedVertex3D {
-        float x, y, z;
-        float u, v;
-        D3DCOLOR color;
-    };
-
-    D3DTexturedVertex3D verts[] = {
-        { world_pos_x - w, world_pos_y - h, world_pos_z, 0.0f, 0.0f, tint },
-        { world_pos_x + w, world_pos_y - h, world_pos_z, 1.0f, 0.0f, tint },
-        { world_pos_x + w, world_pos_y + h, world_pos_z, 1.0f, 1.0f, tint },
-        { world_pos_x - w, world_pos_y + h, world_pos_z, 0.0f, 1.0f, tint }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
-    g_d3d_device->SetTexture(0, texture);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, verts, sizeof(D3DTexturedVertex3D));
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, TRUE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    }
-}
-
-void Py2DRenderer::DrawQuadTextured3D(const std::string& file_path,
-    Point3D p1, Point3D p2, Point3D p3, Point3D p4,
-    bool use_occlusion,
-    uint32_t int_tint) {
-    D3DCOLOR tint = D3DCOLOR_ARGB((int_tint >> 24) & 0xFF, (int_tint >> 16) & 0xFF, (int_tint >> 8) & 0xFF, int_tint & 0xFF);
-    tint = 0xFFFFFFFF;
-    if (!g_d3d_device) return;
-
-    std::wstring wpath(file_path.begin(), file_path.end());
-    LPDIRECT3DTEXTURE9 texture = TextureManager::Instance().GetTexture(wpath);
-    if (!texture) return;
-
-    Setup3DView();
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    }
-
-    // Flip Z to match RH system
-    p1.z = -p1.z;
-    p2.z = -p2.z;
-    p3.z = -p3.z;
-    p4.z = -p4.z;
-
-    struct D3DTexturedVertex3D {
-        float x, y, z;
-        float u, v;
-        D3DCOLOR color;
-    };
-
-    D3DTexturedVertex3D verts[] = {
-        { p1.x, p1.y, p1.z, 0.0f, 0.0f, tint },
-        { p2.x, p2.y, p2.z, 1.0f, 0.0f, tint },
-        { p3.x, p3.y, p3.z, 1.0f, 1.0f, tint },
-        { p4.x, p4.y, p4.z, 0.0f, 1.0f, tint }
-    };
-
-    g_d3d_device->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE);
-    g_d3d_device->SetTexture(0, texture);
-    g_d3d_device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, verts, sizeof(D3DTexturedVertex3D));
-
-    if (!use_occlusion) {
-        g_d3d_device->SetRenderState(D3DRS_ZENABLE, TRUE);
-        g_d3d_device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    }
-}
-
-
-
-
-
-void bind_2drenderer(py::module_& m) {
-    py::class_<Py2DRenderer>(m, "Py2DRenderer")
-        .def(py::init<>())
-        .def("set_primitives", &Py2DRenderer::set_primitives, py::arg("primitives"), py::arg("draw_color") = 0xFFFFFFFF)
-        .def("set_world_zoom_x", &Py2DRenderer::set_world_zoom_x, py::arg("zoom"))
-        .def("set_world_zoom_y", &Py2DRenderer::set_world_zoom_y, py::arg("zoom"))
-        .def("set_world_pan", &Py2DRenderer::set_world_pan, py::arg("x"), py::arg("y"))
-        .def("set_world_rotation", &Py2DRenderer::set_world_rotation, py::arg("r"))
-        .def("set_world_space", &Py2DRenderer::set_world_space, py::arg("enabled"))
-		.def("set_world_scale", &Py2DRenderer::set_world_scale, py::arg("scale"))
-
-        .def("set_screen_offset", &Py2DRenderer::set_screen_offset, py::arg("x"), py::arg("y"))
-        .def("set_screen_zoom_x", &Py2DRenderer::set_screen_zoom_x, py::arg("zoom"))
-        .def("set_screen_zoom_y", &Py2DRenderer::set_screen_zoom_y, py::arg("zoom"))
-        .def("set_screen_rotation", &Py2DRenderer::set_screen_rotation, py::arg("r"))
-
-        .def("set_circular_mask", &Py2DRenderer::set_circular_mask, py::arg("enabled"))
-        .def("set_circular_mask_radius", &Py2DRenderer::set_circular_mask_radius, py::arg("radius"))
-        .def("set_circular_mask_center", &Py2DRenderer::set_circular_mask_center, py::arg("x"), py::arg("y"))
-
-        .def("set_rectangle_mask", &Py2DRenderer::set_rectangle_mask, py::arg("enabled"))
-        .def("set_rectangle_mask_bounds", &Py2DRenderer::set_rectangle_mask_bounds, py::arg("x"), py::arg("y"), py::arg("width"), py::arg("height"))
-
-        .def("render", &Py2DRenderer::render)
-
-
-        .def("DrawLine", &Py2DRenderer::DrawLine, py::arg("from"), py::arg("to"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-        .def("DrawTriangle", &Py2DRenderer::DrawTriangle, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-        .def("DrawTriangleFilled", &Py2DRenderer::DrawTriangleFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF)
-        .def("DrawQuad", &Py2DRenderer::DrawQuad, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("thickness") = 1.0f)
-        .def("DrawQuadFilled", &Py2DRenderer::DrawQuadFilled, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF)
-        .def("DrawPoly", &Py2DRenderer::DrawPoly, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("segments") = 3, py::arg("thickness") = 1.0f)
-        .def("DrawPolyFilled", &Py2DRenderer::DrawPolyFilled, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("segments") = 3)
-        .def("DrawCubeOutline", &Py2DRenderer::DrawCubeOutline, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawCubeFilled", &Py2DRenderer::DrawCubeFilled, py::arg("center"), py::arg("size"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-
-        .def("DrawLine3D", &Py2DRenderer::DrawLine3D, py::arg("from"), py::arg("to"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawTriangle3D", &Py2DRenderer::DrawTriangle3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawTriangleFilled3D", &Py2DRenderer::DrawTriangleFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawQuad3D", &Py2DRenderer::DrawQuad3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawQuadFilled3D", &Py2DRenderer::DrawQuadFilled3D, py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"), py::arg("color") = 0xFFFFFFFF, py::arg("use_occlusion") = true)
-        .def("DrawPoly3D", &Py2DRenderer::DrawPoly3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("segments") = 3, py::arg("autoZ") = true, py::arg("use_occlusion") = true)
-        .def("DrawPolyFilled3D", &Py2DRenderer::DrawPolyFilled3D, py::arg("center"), py::arg("radius"), py::arg("color") = 0xFFFFFFFF, py::arg("segments") = 3, py::arg("autoZ") = true, py::arg("use_occlusion") = true)
-
-        .def("Setup3DView", &Py2DRenderer::Setup3DView)
-        .def("ApplyStencilMask", &Py2DRenderer::ApplyStencilMask)
-        .def("ResetStencilMask", &Py2DRenderer::ResetStencilMask)
-		.def("DrawTexture", &Py2DRenderer::DrawTexture, py::arg("file_path"), py::arg("screen_pos_x"), py::arg("screen_pos_y"), py::arg("width") = 100.0f, py::arg("height") = 100.0f, py::arg("int_tint") = 0xFFFFFFFF)
-		.def("DrawTexture3D", &Py2DRenderer::DrawTexture3D, py::arg("file_path"), py::arg("world_pos_x"), py::arg("world_pos_y"), py::arg("world_pos_z"), py::arg("width") = 100.0f, py::arg("height") = 100.0f, py::arg("use_occlusion") = true, py::arg("int_tint") = 0xFFFFFFFF)
-		.def("DrawQuadTextured3D", &Py2DRenderer::DrawQuadTextured3D, py::arg("file_path"),
-			py::arg("p1"), py::arg("p2"), py::arg("p3"), py::arg("p4"),
-			py::arg("use_occlusion") = true, py::arg("int_tint") = 0xFFFFFFFF);
-}
-
-PYBIND11_EMBEDDED_MODULE(Py2DRenderer, m) {
-    bind_2drenderer(m);
-}

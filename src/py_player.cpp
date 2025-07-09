@@ -444,7 +444,9 @@ std::vector<std::string> PyPlayer::GetChatHistory() {
     return global_chat_messages;
 }
 
-
+bool PyPlayer::Istyping() {
+	return GW::Chat::GetIsTyping();
+}
 
 
 
@@ -592,6 +594,7 @@ namespace GW {
             if (available_chars_ptr)
                 return available_chars_ptr;
             const uintptr_t address = GW::Scanner::Find("\x8b\x35\x00\x00\x00\x00\x57\x69\xF8\x84\x00\x00\x00", "xx????xxxxxxx", 0x2);
+			Logger::AssertAddress("GetAvailableChars", address);
             //ASSERT(address);
             available_chars_ptr = *(GW::Array<AvailableCharacterInfo>**)address;
             return available_chars_ptr;
@@ -775,6 +778,7 @@ void BindPyPlayer(py::module_& m) {
         .def("GetChatHistory", &PyPlayer::GetChatHistory)  // Bind the GetChatHistory method
         .def("RequestChatHistory", &PyPlayer::RequestChatHistory)  // Bind the RequestChatHistory method
         .def("IsChatHistoryReady", &PyPlayer::IsChatHistoryReady)  // Bind the IsChatHistoryReady method
+		.def("Istyping", &PyPlayer::Istyping)  // Bind the Istyping method
         .def("SendChatCommand", &PyPlayer::SendChatCommand, py::arg("msg"))  // Bind the SendChatCommand method
         .def("SendChat", &PyPlayer::SendChat, py::arg("channel"), py::arg("msg"))  // Bind the SendChat method
         .def("SendWhisper", &PyPlayer::SendWhisper, py::arg("name"), py::arg("msg"))  // Bind the SendWhisper method
