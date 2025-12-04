@@ -38,6 +38,18 @@ namespace GW {
         // Returns actual address of a function call given via CALL <near call> instruction e.g. *call_instruction_address = 0xE8 ?? ?? ?? 0xFF
         uintptr_t FunctionFromNearCall(uintptr_t call_instruction_address, bool check_valid_ptr = true);
 
+        uintptr_t FindUseOfAddress(uintptr_t address, int offset, ScannerSection section);
+        uintptr_t FindNthUseOfAddress(uintptr_t address, size_t nth, int offset, ScannerSection section);
+        uintptr_t FindNthUseOfString(const char* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+        uintptr_t FindNthUseOfString(const wchar_t* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+        uintptr_t FindUseOfString(const char* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+        uintptr_t FindUseOfString(const wchar_t* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+
         uintptr_t ToFunctionStart(uintptr_t call_instruction_address, uint32_t scan_range = 0xff);
+
+        
+        
+
     }
 }

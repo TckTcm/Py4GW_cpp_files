@@ -329,11 +329,15 @@ namespace {
 
         address = Scanner::FindAssertion("\\Code\\Engine\\Controls\\CtlEdit.cpp","charCount >= 1",0,0);
         if (address)
-            address = Scanner::FindInRange("\x89\x7e\x44", "xxx", 5, address, address + 0x40);
+            //address = Scanner::FindInRange("\x89\x7e\x44", "xxx", 5, address, address + 0x40);
+            address = Scanner::FindInRange("\x89\x7e\x50", "xxx", 5, address, address + 0x40);
         if(address && Scanner::IsValidPtr(*(uintptr_t*)address))
             IsTyping_FrameId = *(uint32_t **)address;
 
-        address = Scanner::Find("\x6a\x06\x68\x00\x03\x80\x00","xxxxxxx",-0x4);
+
+
+        //address = Scanner::Find("\x6a\x06\x68\x00\x03\x80\x00","xxxxxxx",-0x4);
+        UICallback_AssignEditableText_Func = (UI::UIInteractionCallback)Scanner::ToFunctionStart(Scanner::FindUseOfString("readOnly"));
         if (address && Scanner::IsValidPtr(*(uintptr_t*)address, ScannerSection::Section_TEXT))
             UICallback_AssignEditableText_Func = *(UI::UIInteractionCallback*)address;
 

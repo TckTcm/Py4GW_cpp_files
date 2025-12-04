@@ -80,9 +80,66 @@ uintptr_t GW::Scanner::FunctionFromNearCall(uintptr_t call_instruction_address, 
     return function_address;
 }
 
+uintptr_t GW::Scanner::FindUseOfAddress(uintptr_t address, int offset, ScannerSection section) {
+    return FindNthUseOfAddress(address, 0, offset, section);
+}
+
+uintptr_t GW::Scanner::FindNthUseOfAddress(uintptr_t address, size_t nth, int offset, ScannerSection section) {
+    if (!address) return 0;
+    // Convert runtime address to file-mapped address (what's actually in the file)
+    const uintptr_t file_address = address;// +section_offset_from_disk;
+
+    char pattern[4];
+    memcpy(pattern, &file_address, sizeof(pattern));
+    const char* mask = "xxxx";
+
+    uintptr_t start = 0, end = 0;
+    GW::Scanner::GetSectionAddressRange(section, &start, &end);
+    start -= section_offset_from_disk;
+    end -= section_offset_from_disk;
+
+    auto found = FindInRange(pattern, mask, 0, start, end);
+    if (!found) return 0;
+
+    for (size_t i = 0; i < nth; i++) {
+        found = FindInRange(pattern, mask, 0, found + 1, end);
+        if (!found) return 0;
+    }
+
+    return found + offset;
+}
+
+uintptr_t GW::Scanner::FindNthUseOfString(const wchar_t* str, size_t nth, int offset, ScannerSection section) {
+    const size_t str_len = wcslen(str);
+    std::string mask((str_len * 2) + 1, 'x');
+    const auto found_str = Find((const char*)str, mask.c_str(), 0, ScannerSection::Section_RDATA);
+    const auto first_null_char = FindInRange("\x0\x0", "xx", 2, found_str, found_str - 0x128);
+    return FindNthUseOfAddress(first_null_char, nth, offset, section);
+}
+
+uintptr_t GW::Scanner::FindNthUseOfString(const char* str, size_t nth, int offset, ScannerSection section) {
+    const size_t str_len = strlen(str);
+    std::string mask(str_len + 1, 'x');
+    const auto found_str = Find(str, mask.c_str(), 0, ScannerSection::Section_RDATA);
+    if (!found_str) return 0;
+    const auto first_null_char = FindInRange("\x0", "x", 1, found_str, found_str - 0x64);
+    return FindNthUseOfAddress(first_null_char, nth, offset, section);
+}
+
+uintptr_t GW::Scanner::FindUseOfString(const char* str, int offset, ScannerSection section) {
+    return FindNthUseOfString(str, 0, offset, section);
+}
+
+uintptr_t GW::Scanner::FindUseOfString(const wchar_t* str, int offset, ScannerSection section) {
+    return FindNthUseOfString(str, 0, offset, section);
+}
+
+
+
 uintptr_t GW::Scanner::ToFunctionStart(uintptr_t call_instruction_address, uint32_t scan_range) {
     return call_instruction_address ? FindInRange("\x55\x8b\xec", "xxx", 0, call_instruction_address, call_instruction_address - scan_range) : 0;
 }
+
 
 void GW::Scanner::Initialize(HMODULE hModule) {
 
