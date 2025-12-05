@@ -39,10 +39,12 @@ namespace {
 
 
     void Init() {
+        //Logger::Instance().LogInfo("############ EffectModule initialization started ############");
         PostProcessEffect_Func = (PostProcessEffect_pt)Scanner::Find("\xD9\x5D\x0C\xD9\x45\x0C\x8D\x45\xF8", "xxxxxxxxx", -0x1C);
-
+		Logger::AssertAddress("PostProcessEffect_Func", (uintptr_t)PostProcessEffect_Func, "Effect Module");
         DWORD address = Scanner::Find("\xf6\x40\x04\x01\x74\x10", "xxxxxx", 0x9);
         DropBuff_Func = (DropBuff_pt)Scanner::FunctionFromNearCall(address);
+        Logger::AssertAddress("DropBuff_Func", (uintptr_t)DropBuff_Func, "Effect Module");
 
         GWCA_INFO("[SCAN] PostProcessEffect Function = %p", PostProcessEffect_Func);
         GWCA_INFO("[SCAN] DropBuff Function = %p", DropBuff_Func);
@@ -50,12 +52,11 @@ namespace {
         GWCA_ASSERT(PostProcessEffect_Func);
         GWCA_ASSERT(DropBuff_Func);
 #endif
-		Logger::AssertAddress("PostProcessEffect_Func", (uintptr_t)PostProcessEffect_Func);
-		Logger::AssertAddress("DropBuff_Func", (uintptr_t)DropBuff_Func);
-
 
         int success = HookBase::CreateHook((void**)&PostProcessEffect_Func, OnPostProcessEffect, (void**)&RetPostProcessEffect);
-		Logger::AssertHook("PostProcessEffect_Func", success);
+		Logger::AssertHook("PostProcessEffect_Func", success, "Effect Module");
+
+        //Logger::Instance().LogInfo("############ EffectModule initialization completed ############");
     }
 
     void DisableHooks() {

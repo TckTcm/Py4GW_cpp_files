@@ -35,6 +35,7 @@ namespace {
     GW::TitleClientData* title_data = 0;
 
     void Init() {
+        //Logger::Instance().LogInfo("############ PlayerMgr initialization started ############");
         uintptr_t address = 0;
 
         address = Scanner::ToFunctionStart(Scanner::FindAssertion("AttribTitles.cpp", "!*hdr.param",0,0)); // UI::UIInteractionCallback for title row
@@ -60,10 +61,10 @@ namespace {
         GWCA_INFO("[SCAN] SetActiveTitle_Func = %p", SetActiveTitle_Func);
         GWCA_INFO("[SCAN] DepositFaction_Func = %p", DepositFaction_Func);
 
-		Logger::AssertAddress("RemoveActiveTitle_Func", (uintptr_t)RemoveActiveTitle_Func);
-		Logger::AssertAddress("SetActiveTitle_Func", (uintptr_t)SetActiveTitle_Func);
-		Logger::AssertAddress("DepositFaction_Func", (uintptr_t)DepositFaction_Func);
-		Logger::AssertAddress("title_data", (uintptr_t)title_data);
+		Logger::AssertAddress("RemoveActiveTitle_Func", (uintptr_t)RemoveActiveTitle_Func, "Player Module");
+		Logger::AssertAddress("SetActiveTitle_Func", (uintptr_t)SetActiveTitle_Func, "Player Module");
+		Logger::AssertAddress("DepositFaction_Func", (uintptr_t)DepositFaction_Func, "Player Module");
+		Logger::AssertAddress("title_data", (uintptr_t)title_data, "Player Module");
 
 #ifdef _DEBUG
         GWCA_ASSERT(RemoveActiveTitle_Func);
@@ -71,6 +72,8 @@ namespace {
         GWCA_ASSERT(DepositFaction_Func);
         GWCA_ASSERT(title_data);
 #endif
+
+        //Logger::Instance().LogInfo("############ PlayerMgr initialization completed ############");
     }
 }
 

@@ -54,53 +54,51 @@ bool DLLMain::Initialize() {
 
     if (!initialized) Logger::Instance().LogInfo("Attempting to initialize DLL...");
     // Initialize GWCA
-    if (!InitializeGWCA()) {
-        Logger::Instance().LogError("Failed to initialize GWCA");
-        return false;
-    }
-    else
-	{
-        if (!initialized) Logger::Instance().LogInfo("GWCA initialized successfully.");
+	const auto initialized_gwca = InitializeGWCA();
+
+	if (!initialized_gwca) {
+		Logger::Instance().LogError("[DLLMain] Failed to initialize GWCA");
+		return false;
 	}
 
     // Get Guild Wars window handle
-    if (!initialized) Logger::Instance().LogInfo("Attempting to get GW window handle...");
+    if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to get GW window handle...");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
     if (!gw_window_handle) {
-		Logger::Instance().LogError("Failed to get GW window handle");
+		Logger::Instance().LogError("[DLLMain] Failed to get GW window handle");
         return false;
     }
     else
     {
-        if (!initialized) Logger::Instance().LogInfo("GW window handle obtained successfully.");
+        if (!initialized) Logger::Instance().LogInfo("[DLLMain] GW window handle obtained successfully.");
     }
 
     // Attach render hook
-    if (!initialized) Logger::Instance().LogInfo("Attempting to attach render hook...");
+    if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to attach render hook...");
     if (!AttachRenderHook()) {
-        Logger::Instance().LogError("Failed to attach render hook");
+        Logger::Instance().LogError("[DLLMain] Failed to attach render hook");
         return false;
     }
     else
 	{
-        if (!initialized) Logger::Instance().LogInfo("Render hook attached successfully.");
+        if (!initialized) Logger::Instance().LogInfo("[DLLMain] Render hook attached successfully.");
 	}
 
     // Attach window procedure hook
-    if (!initialized) Logger::Instance().LogInfo("Attempting to attach window procedure hook...");
+    if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to attach window procedure hook...");
     if (!AttachWndProc()) {
-		Logger::Instance().LogError("Failed to attach window procedure");
+		Logger::Instance().LogError("[DLLMain] Failed to attach window procedure");
         return false;
     }
 	else
 	{
-        if (!initialized) Logger::Instance().LogInfo("Window procedure hook attached successfully.");
+        if (!initialized) Logger::Instance().LogInfo("[DLLMain] Window procedure hook attached successfully.");
 	}
 
     running = true;
     initialized = true;
     last_tick = GetTickCount64();
-    Logger::Instance().LogInfo("DLL Initialize complete.");
+    Logger::Instance().LogInfo("[DLLMain] DLL Initialize complete.");
     return true;
 }
 
@@ -375,7 +373,7 @@ void DLLMain::Draw(IDirect3DDevice9* device) {
 
 bool DLLMain::AttachRenderHook() {
     Logger::Instance().SetLogFile("Py4GW_injection_log.txt");
-	Logger::Instance().LogInfo("Installing render hook...");
+	Logger::Instance().LogInfo("[AttachRenderHook] Installing render hook...");
     if (render_hook_attached) return true;
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         DLLMain::Instance().Draw(device);

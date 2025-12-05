@@ -91,14 +91,16 @@ namespace {
 
 
     void Init() {
+        //Logger::Instance().LogInfo("############ MerchantMgr initialization started ############");
+
         TransactItem_Func = (TransactItem_pt )Scanner::Find("\x85\xFF\x74\x1D\x8B\x4D\x14\xEB\x08", "xxxxxxxxx", -0x7F);
         RequestQuote_func = (RequestQuote_pt )Scanner::Find("\x8B\x75\x20\x83\xFE\x10\x76\x14", "xxxxxxxx", -0x35);
 
         GWCA_INFO("[SCAN] TransactItem Function = %p", TransactItem_Func);
         GWCA_INFO("[SCAN] RequestQuote Function = %p", RequestQuote_func);
 
-		Logger::AssertAddress("TransactItem Function", (uintptr_t)TransactItem_Func);
-		Logger::AssertAddress("RequestQuote Function", (uintptr_t)RequestQuote_func);
+		Logger::AssertAddress("TransactItem Function", (uintptr_t)TransactItem_Func, "Merchant Module");
+		Logger::AssertAddress("RequestQuote Function", (uintptr_t)RequestQuote_func, "Merchant Module");
 
 #ifdef _DEBUG
         GWCA_ASSERT(TransactItem_Func);
@@ -106,14 +108,16 @@ namespace {
 #endif
         if (TransactItem_Func) {
             int result = HookBase::CreateHook((void**)&TransactItem_Func, OnTransactItem, (void**)&TransactItem_Ret);
-			Logger::AssertHook("TransactItem_Func", result);
+			Logger::AssertHook("TransactItem_Func", result, "Merchant Module");
             UI::RegisterUIMessageCallback(&OnTransactItemEntry, UI::UIMessage::kSendMerchantTransactItem, OnTransactItem_UIMessage, 0x1);
         }
         if (RequestQuote_func) {
             int result = HookBase::CreateHook((void**)&RequestQuote_func, OnRequestQuote, (void**)&RequestQuote_Ret);
-			Logger::AssertHook("RequestQuote_func", result);
+			Logger::AssertHook("RequestQuote_func", result, "Merchant Module");
             UI::RegisterUIMessageCallback(&OnRequestQuoteItemEntry, UI::UIMessage::kSendMerchantRequestQuote, OnRequestQuote_UIMessage, 0x1);
         }
+
+        //Logger::Instance().LogInfo("############ MerchantMgr initialization completed ############");
     }
     void DisableHooks() {
         if (TransactItem_Func)

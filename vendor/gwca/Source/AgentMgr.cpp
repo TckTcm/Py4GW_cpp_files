@@ -138,6 +138,9 @@ namespace {
     }
 
     void Init() {
+
+        //Logger::Instance().LogInfo("############ AgentMgr initialization started ############");
+
         uintptr_t address = 0;
 
         ChangeTarget_Func = (ChangeTarget_pt)GW::Scanner::ToFunctionStart(Scanner::FindAssertion("AvSelect.cpp", "!(autoAgentId && !ManagerFindAgent(autoAgentId))",0,0));
@@ -181,15 +184,14 @@ namespace {
         GWCA_INFO("[SCAN] SendGadgetDialog_Func = %p", SendGadgetDialog_Func);
 
 
-        Logger::AssertAddress("AgentArrayPtr", (uintptr_t)AgentArrayPtr);
-        Logger::AssertAddress("PlayerAgentIdPtr", (uintptr_t)PlayerAgentIdPtr);
-		Logger::AssertAddress("MoveTo_Func", (uintptr_t)MoveTo_Func);
-		Logger::AssertAddress("ChangeTarget_Func", (uintptr_t)ChangeTarget_Func);
-		Logger::AssertAddress("SendAgentDialog_Func", (uintptr_t)SendAgentDialog_Func);
-		Logger::AssertAddress("SendGadgetDialog_Func", (uintptr_t)SendGadgetDialog_Func);
+        Logger::AssertAddress("AgentArrayPtr", (uintptr_t)AgentArrayPtr, "Agent Module");
+        Logger::AssertAddress("PlayerAgentIdPtr", (uintptr_t)PlayerAgentIdPtr, "Agent Module");
+		Logger::AssertAddress("MoveTo_Func", (uintptr_t)MoveTo_Func, "Agent Module");
+		Logger::AssertAddress("ChangeTarget_Func", (uintptr_t)ChangeTarget_Func, "Agent Module");
+		Logger::AssertAddress("SendAgentDialog_Func", (uintptr_t)SendAgentDialog_Func, "Agent Module");
+		Logger::AssertAddress("SendGadgetDialog_Func", (uintptr_t)SendGadgetDialog_Func, "Agent Module");
 
-
-
+        //Logger::Instance().LogInfo("############ AgentMgr initialization complete ############");
 
 
     }

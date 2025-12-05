@@ -268,7 +268,7 @@ void PyLivingAgent::GetContext() {
     is_player = living->IsPlayer();
     is_npc = living->IsNPC();
     casting_skill_id = living->skill;
-    overcast = living->h0118;
+    overcast = living->h0128;
 
 	//h00C8 = living->h00C8;
 	//h00CC = living->h00CC;

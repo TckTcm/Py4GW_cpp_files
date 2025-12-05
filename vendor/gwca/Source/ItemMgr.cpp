@@ -229,6 +229,8 @@ namespace {
 
     void Init() {
 
+        //Logger::Instance().LogInfo("############ ItemMgrModule initialization started ############");
+
         DWORD address = 0;
 
         address = Scanner::Find("\xC7\x00\x0F\x00\x00\x00\x89\x48\x14", "xxxxxxxxx", -0x28);
@@ -339,26 +341,26 @@ namespace {
         GWCA_INFO("[SCAN] GetPvPItemUpgradeInfoName_Func = %p", GetPvPItemUpgradeInfoName_Func);
 
 
-		Logger::AssertAddress("OnSalvagePopup_UICallback_Func", (uintptr_t)OnSalvagePopup_UICallback_Func);
-		Logger::AssertAddress("item_formulas", (uintptr_t)item_formulas);
-		Logger::AssertAddress("storage_open_addr", (uintptr_t)storage_open_addr);
-		Logger::AssertAddress("ItemClick_Func", (uintptr_t)ItemClick_Func);
-		Logger::AssertAddress("EquipItem_Func", (uintptr_t)EquipItem_Func);
-		Logger::AssertAddress("UseItem_Func", (uintptr_t)UseItem_Func);
-		Logger::AssertAddress("MoveItem_Func", (uintptr_t)MoveItem_Func);
-		Logger::AssertAddress("DropGold_Func", (uintptr_t)DropGold_Func);
-		Logger::AssertAddress("DropItem_Func", (uintptr_t)DropItem_Func);
-		Logger::AssertAddress("ChangeEquipmentVisibility_Func", (uintptr_t)ChangeEquipmentVisibility_Func);
-		Logger::AssertAddress("ChangeGold_Func", (uintptr_t)ChangeGold_Func);
-		Logger::AssertAddress("OpenLockedChest_Func", (uintptr_t)OpenLockedChest_Func);
-		Logger::AssertAddress("PingWeaponSet_Func", (uintptr_t)PingWeaponSet_Func);
-		Logger::AssertAddress("SalvageSessionCancel_Func", (uintptr_t)SalvageSessionCancel_Func);
-		Logger::AssertAddress("SalvageSessionComplete_Func", (uintptr_t)SalvageSessionComplete_Func);
-		Logger::AssertAddress("SalvageMaterials_Func", (uintptr_t)SalvageMaterials_Func);
-		Logger::AssertAddress("unlocked_pvp_item_upgrade_array.m_buffer", (uintptr_t)unlocked_pvp_item_upgrade_array.m_buffer);
-		Logger::AssertAddress("unlocked_pvp_item_upgrade_array.m_size", (uintptr_t)unlocked_pvp_item_upgrade_array.m_size);
-		Logger::AssertAddress("GetPvPItemUpgradeInfoName_Func", (uintptr_t)GetPvPItemUpgradeInfoName_Func);
-		Logger::AssertAddress("DestroyItem_Func", (uintptr_t)DestroyItem_Func);
+		Logger::AssertAddress("OnSalvagePopup_UICallback_Func", (uintptr_t)OnSalvagePopup_UICallback_Func, "Item Module");
+		Logger::AssertAddress("item_formulas", (uintptr_t)item_formulas, "Item Module");
+		Logger::AssertAddress("storage_open_addr", (uintptr_t)storage_open_addr, "Item Module");
+		Logger::AssertAddress("ItemClick_Func", (uintptr_t)ItemClick_Func, "Item Module");
+		Logger::AssertAddress("EquipItem_Func", (uintptr_t)EquipItem_Func, "Item Module");
+		Logger::AssertAddress("UseItem_Func", (uintptr_t)UseItem_Func, "Item Module");
+		Logger::AssertAddress("MoveItem_Func", (uintptr_t)MoveItem_Func, "Item Module");
+		Logger::AssertAddress("DropGold_Func", (uintptr_t)DropGold_Func, "Item Module");
+		Logger::AssertAddress("DropItem_Func", (uintptr_t)DropItem_Func, "Item Module");
+		Logger::AssertAddress("ChangeEquipmentVisibility_Func", (uintptr_t)ChangeEquipmentVisibility_Func, "Item Module");
+		Logger::AssertAddress("ChangeGold_Func", (uintptr_t)ChangeGold_Func, "Item Module");
+		Logger::AssertAddress("OpenLockedChest_Func", (uintptr_t)OpenLockedChest_Func, "Item Module");
+		Logger::AssertAddress("PingWeaponSet_Func", (uintptr_t)PingWeaponSet_Func, "Item Module");
+		Logger::AssertAddress("SalvageSessionCancel_Func", (uintptr_t)SalvageSessionCancel_Func, "Item Module");
+		Logger::AssertAddress("SalvageSessionComplete_Func", (uintptr_t)SalvageSessionComplete_Func, "Item Module");
+		Logger::AssertAddress("SalvageMaterials_Func", (uintptr_t)SalvageMaterials_Func, "Item Module");
+		Logger::AssertAddress("unlocked_pvp_item_upgrade_array.m_buffer", (uintptr_t)unlocked_pvp_item_upgrade_array.m_buffer, "Item Module");
+		Logger::AssertAddress("unlocked_pvp_item_upgrade_array.m_size", (uintptr_t)unlocked_pvp_item_upgrade_array.m_size, "Item Module");
+		Logger::AssertAddress("GetPvPItemUpgradeInfoName_Func", (uintptr_t)GetPvPItemUpgradeInfoName_Func, "Item Module");
+		Logger::AssertAddress("DestroyItem_Func", (uintptr_t)DestroyItem_Func, "Item Module");
 
 
         //HookBase::CreateHook((void**)&ItemClick_Func, OnItemClick, (void**)&RetItemClick);
@@ -366,23 +368,25 @@ namespace {
         if (OnSalvagePopup_UICallback_Func)
 			Logger::AssertHook("OnSalvagePopup_UICallback_Func,", HookBase::CreateHook((void**)&OnSalvagePopup_UICallback_Func, OnSalvagePopup_UICallback, (void**)&OnSalvagePopup_UICallback_Ret));
         if (ItemClick_Func)
-            Logger::AssertHook("ItemClick_Func", HookBase::CreateHook((void**)&ItemClick_Func, OnItemClick, (void**)&RetItemClick));
+            Logger::AssertHook("ItemClick_Func", HookBase::CreateHook((void**)&ItemClick_Func, OnItemClick, (void**)&RetItemClick), "Item Module");
 
         if (PingWeaponSet_Func) {
-			Logger::AssertHook("PingWeaponSet_Func", HookBase::CreateHook((void**)&PingWeaponSet_Func, OnPingWeaponSet, (void**)&PingWeaponSet_Ret));
+			Logger::AssertHook("PingWeaponSet_Func", HookBase::CreateHook((void**)&PingWeaponSet_Func, OnPingWeaponSet, (void**)&PingWeaponSet_Ret), "Item Module");
             UI::RegisterUIMessageCallback(&OnPingWeaponSet_Entry, UI::UIMessage::kSendPingWeaponSet, OnPingWeaponSet_UIMessage, 0x1);
         }
         if (MoveItem_Func) {
-            Logger::AssertHook("MoveItem_Func", HookBase::CreateHook((void**)&MoveItem_Func, OnMoveItem, (void**)&MoveItem_Ret));
+            Logger::AssertHook("MoveItem_Func", HookBase::CreateHook((void**)&MoveItem_Func, OnMoveItem, (void**)&MoveItem_Ret), "Item Module");
             UI::RegisterUIMessageCallback(&OnMoveItem_Entry, UI::UIMessage::kSendMoveItem, OnMoveItem_UIMessage, 0x1);
         }
         if (UseItem_Func) {
-            Logger::AssertHook("UseItem_Func", HookBase::CreateHook((void**)&UseItem_Func, OnUseItem, (void**)&UseItem_Ret));
+            Logger::AssertHook("UseItem_Func", HookBase::CreateHook((void**)&UseItem_Func, OnUseItem, (void**)&UseItem_Ret), "Item Module");
             UI::RegisterUIMessageCallback(&OnUseItem_Entry, UI::UIMessage::kSendUseItem, OnUseItem_UIMessage, 0x1);
         }
         if (ChangeGold_Func) {
-			Logger::AssertHook("ChangeGold_Func", HookBase::CreateHook((void**)&ChangeGold_Func, OnChangeGold, (void**)&ChangeGold_Ret));
+			Logger::AssertHook("ChangeGold_Func", HookBase::CreateHook((void**)&ChangeGold_Func, OnChangeGold, (void**)&ChangeGold_Ret), "Item Module");
         }
+
+        //Logger::Instance().LogInfo("############ ItemMgrModule initialization completed ############");
     }
 
     void EnableHooks() {

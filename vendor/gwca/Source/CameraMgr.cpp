@@ -26,9 +26,16 @@ namespace {
 
     void Init() {
 
+        //Logger::Instance().LogInfo("############ CameraMgrModule initialization started ############");
+
         uintptr_t address = Scanner::FindAssertion("GmCam.cpp", "fov", 0, 0xf);
-        if (address)
+        if (address) {
             address = Scanner::FindInRange("\xd9\xee\xb9", "xxx", 3, address, address + 0xf);
+        }
+        else {
+			Logger::Instance().LogError("Failed to find FOV address");
+        }
+
         if (address && Scanner::IsValidPtr(*(uintptr_t*)address))
             scan_cam_class = *(Camera**)address;
 
@@ -40,7 +47,7 @@ namespace {
             patch_fog.SetPatch(address, "\x00", 1);
         else {
             std::ostringstream oss;
-            oss << "Failed to Patch   = " << (void*)address;
+            oss << "[Camera Module] Failed to Patch   = " << (void*)address;
             Logger::Instance().LogError(oss.str());
         }
 
@@ -62,7 +69,7 @@ namespace {
             }
             else {
                 std::ostringstream oss;
-                oss << "Failed to Patch   = " << (void*)address;
+                oss << "[Camera Module] Failed to Patch   = " << (void*)address;
                 Logger::Instance().LogError(oss.str());
             }
         }
@@ -72,9 +79,11 @@ namespace {
         GWCA_INFO("[SCAN] scan_cam_class = %p", scan_cam_class);
 
 
-        Logger::AssertAddress("patch_fog.GetAddress()", (uintptr_t)patch_fog.GetAddress());
-		Logger::AssertAddress("patch_cam_update.GetAddress()", (uintptr_t)patch_cam_update.GetAddress());
-		Logger::AssertAddress("scan_cam_class", (uintptr_t)scan_cam_class);
+		Logger::AssertAddress("patch_fog.GetAddress()", (uintptr_t)patch_fog.GetAddress(), "CameraModule");
+		Logger::AssertAddress("patch_cam_update.GetAddress()", (uintptr_t)patch_cam_update.GetAddress(), "CameraModule");
+		Logger::AssertAddress("scan_cam_class", (uintptr_t)scan_cam_class, "CameraModule");
+
+        //Logger::Instance().LogInfo("############ CameraMgrModule initialization complete ############");
     }
 
     void Exit() {

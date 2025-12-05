@@ -139,24 +139,53 @@ namespace {
     ChangeSecondary_pt ChangeSecondary_Func = 0;
 
     void Init() {
+        //Logger::Instance().LogInfo("############ SkillbarMgr initialization started ############");
+
+        //DWORD address = 0;
+        //address = GW::Scanner::Find("\x8D\x04\xB6\xC1\xE0\x05\x05", "xxxxxxx", +7);
+		/*
+        if (address) {
+            if (Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA))
+                skill_array_addr = *(Skill**)address;
+			Logger::AssertAddress("skill_array_addr", (uintptr_t)skill_array_addr, "Skillbar Module");
+		}
+        else {
+			Logger::Instance().LogError("Failed to find skill_array_addr", "Skillbar Module");
+        }
+        */
 
         DWORD address = 0;
-        address = GW::Scanner::Find("\x8D\x04\xB6\xC1\xE0\x05\x05", "xxxxxxx", +7);
-        if (Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA))
-            skill_array_addr = *(Skill**)address;
-
+        address = GW::Scanner::FindAssertion("ConstSkill.cpp", "index < arrsize(s_energyTable)", 0, 0);
+        if (address) {
+            skill_array_addr = *(Skill**)address - 0x26;
+            Logger::AssertAddress("skill_array_addr", (uintptr_t)skill_array_addr, "Skillbar Module");
+        }
+        else {
+            Logger::Instance().LogError("Failed to find skill_array_addr", "Skillbar Module");
+        }
+  
+        
         address = GW::Scanner::Find("\xba\x33\x00\x00\x00\x89\x08\x8d\x40\x04", "x?xxxxxxxx", -4);
-        if (Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA))
-            attribute_array_addr = *(AttributeInfo**)address;
+        if (address) {
+            if (Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA))
+                attribute_array_addr = *(AttributeInfo**)address;
+			Logger::AssertAddress("attribute_array_addr", (uintptr_t)attribute_array_addr, "Skillbar Module");
+		}
+		else {
+			Logger::Instance().LogError("Failed to find attribute_array_addr", "Skillbar Module");
+		}
 
         UseSkill_Func = (UseSkill_pt)Scanner::ToFunctionStart(GW::Scanner::Find("\x85\xF6\x74\x5B\x83\xFE\x11\x74", "xxxxxxxx"), 0x200);
-
+        Logger::AssertAddress("UseSkill_Func", (uintptr_t)UseSkill_Func, "Skillbar Module");
 
         address = Scanner::FindAssertion("TemplatesHelpers.cpp", "targetPrimaryProf == templateData.profPrimary",0,0);
         if (address) {
             ChangeSecondary_Func = (ChangeSecondary_pt)Scanner::FunctionFromNearCall(address + 0x20);
+            Logger::AssertAddress("ChangeSecondary_Func", (uintptr_t)ChangeSecondary_Func, "Skillbar Module");
             LoadAttributes_Func = (LoadAttributes_pt)Scanner::FunctionFromNearCall(address + 0x34);
+            Logger::AssertAddress("LoadAttributes_Func", (uintptr_t)LoadAttributes_Func, "Skillbar Module");
             LoadSkills_Func = (LoadSkills_pt)Scanner::FunctionFromNearCall(address + 0x40);
+            Logger::AssertAddress("LoadSkills_Func", (uintptr_t)LoadSkills_Func, "Skillbar Module");
         }
 
         GWCA_INFO("[SCAN] SkillArray = %p", skill_array_addr);
@@ -172,25 +201,20 @@ namespace {
         GWCA_ASSERT(LoadSkills_Func);
         GWCA_ASSERT(UseSkill_Func);
 #endif
-		Logger::AssertAddress("skill_array_addr", (uintptr_t)skill_array_addr);
-		Logger::AssertAddress("attribute_array_addr", (uintptr_t)attribute_array_addr);
-		Logger::AssertAddress("ChangeSecondary_Func", (uintptr_t)ChangeSecondary_Func);
-		Logger::AssertAddress("LoadAttributes_Func", (uintptr_t)LoadAttributes_Func);
-		Logger::AssertAddress("LoadSkills_Func", (uintptr_t)LoadSkills_Func);
-		Logger::AssertAddress("UseSkill_Func", (uintptr_t)UseSkill_Func);
+
 
         if (UseSkill_Func) {
             int resutlt = HookBase::CreateHook((void**)&UseSkill_Func, OnUseSkill, (void**)&RetUseSkill);
-			Logger::AssertHook("UseSkill_Func", resutlt);
+			Logger::AssertHook("UseSkill_Func", resutlt, "Skillbar Module");
         }
 
         if (LoadSkills_Func) {
             int result = HookBase::CreateHook((void**)&LoadSkills_Func, OnLoadSkillbar, (void**)&RetLoadSkills);
-			Logger::AssertHook("LoadSkills_Func", result);
+			Logger::AssertHook("LoadSkills_Func", result, "Skillbar Module");
             UI::RegisterUIMessageCallback(&OnLoadSkillbar_HookEntry, UI::UIMessage::kSendLoadSkillbar, OnLoadSkillbar_UIMessage, 0x1);
         }
 
-
+        //Logger::Instance().LogInfo("############ SkillbarMgr initialization completed ############");
     }
 
     void EnableHooks() {

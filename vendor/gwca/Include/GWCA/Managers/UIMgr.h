@@ -1285,7 +1285,10 @@ namespace GW {
             ScreenBorderless, // 0x1 = Windowed Borderless, 0x2 = Windowed Fullscreen
             MasterVolume, // 0 to 100
             ClockMode,
-            Count = 0x29
+            MobileUiScale,
+            GamepadCursorSpeed,
+            LastLoginMethod,
+            Count = 44
         };
         enum class FlagPreference : uint32_t {
             // boolean preferences

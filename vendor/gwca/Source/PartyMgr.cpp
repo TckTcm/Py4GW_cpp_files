@@ -31,10 +31,13 @@ namespace {
     UI::UIInteractionCallback TickButtonUICallback = 0;
     UI::UIInteractionCallback TickButtonUICallback_Ret = 0;
 
+    UI::UIInteractionCallback PartyPlayerMember_UICallback = 0;
+
     typedef void(__cdecl* PartySearchSeek_pt)(uint32_t search_type, const wchar_t* advertisement, uint32_t unk);
     PartySearchSeek_pt PartySearchSeek_Func = 0;
 
     typedef void(__fastcall* PartySearchButtonCallback_pt)(void* context, uint32_t edx, uint32_t* wparam);
+    //typedef void(__fastcall* PartySearchButtonCallback_pt)(void* context, uint32_t edx, GW::UI::UIPacket::kMouseAction* wparam);
     PartySearchButtonCallback_pt PartySearchButtonCallback_Func = 0;
     PartySearchButtonCallback_pt PartyWindowButtonCallback_Func = 0;
 
@@ -78,49 +81,89 @@ namespace {
     }
 
     void Init() {
+        //Logger::Instance().LogInfo("############ PartyMgr initialization started ############");
         // This function runs every time an update is made to the party window
 
-        uintptr_t address = Scanner::Find("\x68\xfb\x0b\x01\x00", "xxxxx", 0x16);
-        if (address)
-            TickButtonUICallback = (UI::UIInteractionCallback)Scanner::FunctionFromNearCall(*(uintptr_t*)address);
+        //uintptr_t address = Scanner::Find("\x68\xfb\x0b\x01\x00", "xxxxx", 0x16);
+        uintptr_t address = Scanner::Find("\x05\xfb\x0b\x01\x00", "xxxxx");
+        if (address) {
+            TickButtonUICallback = (UI::UIInteractionCallback)Scanner::ToFunctionStart(address, 0xfff);
+            //TickButtonUICallback = (UI::UIInteractionCallback)Scanner::FunctionFromNearCall(*(uintptr_t*)address);
+			Logger::AssertAddress("TickButtonUICallback", (uintptr_t)TickButtonUICallback, "Party Module");
+        }
+        else {
+			Logger::Instance().LogError("Could not find TickButtonUICallback", "Party Module");
+        }
 
+        
+        /*
         address = Scanner::Find("\x8b\x75\x08\x68\x28\x01\x00\x10", "xxxxxxx"); // NB: UI Message 0x10000128 lands within hard mode button ui callback
-        if (address)
+        if (address) {
             address = Scanner::FindInRange("\xff\x70\x20\xe8", "xxxx", 3, address, address + 0xff);
-        SetDifficulty_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
+            if (address) {
+                SetDifficulty_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
+            }
+            else {
+                Logger::Instance().LogError("Could not find SetDifficulty_Func inner call", "Party Module");
+            }
+        }
+        else {
+			Logger::Instance().LogError("Could not find SetDifficulty_Func call", "Party Module");
+		}
+        */
+        address = Scanner::Find("\x89\x46\x20\xF7", "xxxx", 0xBB); // NB: UI Message 0x10000128 lands within hard mode button ui callback
+        if (address)
+            SetDifficulty_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
+
+		Logger::AssertAddress("SetDifficulty_Func", (uintptr_t)SetDifficulty_Func, "Party Module");
 
         address = Scanner::Find("\x8b\x78\x4c\x8d\x8f\x9c\x00\x00\x00", "xxxxxxxxx", -0xc);
         if (Scanner::IsValidPtr(address, ScannerSection::Section_TEXT))
             PartySearchSeek_Func = (PartySearchSeek_pt)address;
 
+		Logger::AssertAddress("PartySearchSeek_Func", (uintptr_t)PartySearchSeek_Func, "Party Module");
+
         // Party Search Window Button Callback functions
         PartySearchButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtSearch.cpp", "m_activeList == LIST_HEROES",0,0));
+        Logger::AssertAddress("PartySearchButtonCallback_Func", (uintptr_t)PartySearchButtonCallback_Func, "Party Module");
 
         // Party Window Button Callback functions
         //PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtButtons.cpp", "m_selection.agentId",0,0));
-        PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::Find("\x8D\x77\x24\x56", "xxxx"));
+        //PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::Find("\x8D\x77\x24\x56", "xxxx"));
+        PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindUseOfString("selection.agentId"));
+        Logger::AssertAddress("PartyWindowButtonCallback_Func", (uintptr_t)PartyWindowButtonCallback_Func, "Party Module");
+
+        PartyPlayerMember_UICallback = (UI::UIInteractionCallback)Scanner::ToFunctionStart(Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtPlayer.cpp", "No valid case for switch variable '\"\"'", 0, 0), 0xfff);
+		Logger::AssertAddress("PartyPlayerMember_UICallback", (uintptr_t)PartyPlayerMember_UICallback, "Party Module");
+
 
         address = Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtPlayer.cpp", "No valid case for switch variable '\"\"'", 0, 0x27);
         SetReadyStatus_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
+        Logger::AssertAddress("SetReadyStatus_Func", (uintptr_t)SetReadyStatus_Func, "Party Module");
 
         //address = Scanner::Find("\x8d\x45\x10\x50\x56\x6a\x4e\x57", "xxxxxxxx");
         address = Scanner::Find("\x8d\x45\x10\x50\x56\x6a\x5b\x57", "xxxxxxxx");
-		Logger::AssertAddress("FlagAgent address", (uintptr_t)address);
+		Logger::AssertAddress("FlagAgent address", (uintptr_t)address, "Party Module");
         if (Scanner::IsValidPtr(address, ScannerSection::Section_TEXT)) {
             //address = Scanner::FindInRange("\x83\xc4\x04\x50\xe8", "xxxxx", 4, address, address + 0x64);
             address = Scanner::FindInRange("\x8d\x4d\xe0\x51\x50\xe8", "xxxxxx", 5, address, address + 0x64);
+            
             FlagHeroAgent_Func = (FlagHeroAgent_pt)Scanner::FunctionFromNearCall(address);
             if(address) address = Scanner::FindInRange("\xc7\x45\xdc", "xxx", 7, address, address + 0x64);
             FlagAll_Func = (FlagAll_pt)Scanner::FunctionFromNearCall(address);
         }
+        Logger::AssertAddress("FlagHeroAgent_Func", (uintptr_t)FlagHeroAgent_Func, "Party Module");
+        Logger::AssertAddress("FlagAll_Func", (uintptr_t)FlagAll_Func, "Party Module");
 
         address = Scanner::Find("\x83\xc4\x10\x83\xff\x03\x75\x17", "xxxxxxxx",0x38);
-		Logger::AssertAddress("PetTarget address", (uintptr_t)address);
+		Logger::AssertAddress("PetTarget address", (uintptr_t)address, "Party Module");
         if (Scanner::IsValidPtr(address, ScannerSection::Section_TEXT)) {
 
             LockPetTarget_Func = (LockPetTarget_pt)Scanner::FunctionFromNearCall(address);
             SetHeroBehavior_Func = (SetHeroBehavior_pt)Scanner::FunctionFromNearCall(address + 0x7);
         }
+        Logger::AssertAddress("SetHeroBehavior_Func", (uintptr_t)SetHeroBehavior_Func, "Party Module");
+        Logger::AssertAddress("LockPetTarget_Func", (uintptr_t)LockPetTarget_Func, "Party Module");
 
         address = Scanner::Find("\x6a\x00\x68\x00\x02\x02\x00\xff\x77\x04", "xxxxxxxxxx");
         if (Scanner::IsValidPtr(address, ScannerSection::Section_TEXT)) {
@@ -149,18 +192,14 @@ namespace {
         GWCA_ASSERT(SetHeroBehavior_Func);
         GWCA_ASSERT(LockPetTarget_Func);
 #endif
-		Logger::AssertAddress("PartyWindowButtonCallback_Func", (uintptr_t)PartyWindowButtonCallback_Func);
-		Logger::AssertAddress("PartySearchButtonCallback_Func", (uintptr_t)PartySearchButtonCallback_Func);
-		Logger::AssertAddress("TickButtonUICallback", (uintptr_t)TickButtonUICallback);
-		Logger::AssertAddress("SetReadyStatus_Func", (uintptr_t)SetReadyStatus_Func);
-		Logger::AssertAddress("FlagHeroAgent_Func", (uintptr_t)FlagHeroAgent_Func);
-		Logger::AssertAddress("FlagAll_Func", (uintptr_t)FlagAll_Func);
-		Logger::AssertAddress("SetHeroBehavior_Func", (uintptr_t)SetHeroBehavior_Func);
-		Logger::AssertAddress("LockPetTarget_Func", (uintptr_t)LockPetTarget_Func);
-
+        //std::ostringstream ss;
+        //ss << "PartyWindowButtonCallback_Func = " << (void*)PartyWindowButtonCallback_Func;
+        //Logger::LogStaticInfo(ss.str());
 
         int success = HookBase::CreateHook((void**)&TickButtonUICallback, OnTickButtonUICallback, (void**)&TickButtonUICallback_Ret);
-		Logger::AssertHook("TickButtonUICallback", success);
+		Logger::AssertHook("TickButtonUICallback", success, "Party Module");
+
+        //Logger::Instance().LogInfo("############ PartyMgr initialization complete ############");
     }
 
     void EnableHooks() {

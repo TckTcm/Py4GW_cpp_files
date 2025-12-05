@@ -130,6 +130,9 @@ namespace {
     }
     // GW doesn't have the StoC array in RDATA; its built from the different StoC modules in DATA, so trying to find it before GW is fully loaded will cause undefined behaviour
     void InitOnGameThread() {
+        //Logger::Instance().LogInfo("############ StoCMgr initialization started ############");
+
+
         SafeInitializeCriticalSection(&mutex);
         EnterCriticalSection(&mutex);
         uintptr_t StoCHandler_Addr;
@@ -141,7 +144,7 @@ namespace {
                 GameServer** addr = reinterpret_cast<GameServer**>(StoCHandler_Addr);
                 game_server_handlers = &(*addr)->gs_codec->handlers;
             }
-			Logger::AssertAddress("StoCHandler_Addr", StoCHandler_Addr);
+            Logger::AssertAddress("StoCHandler_Addr", StoCHandler_Addr, "StoC Module");
             
         }
 
@@ -154,6 +157,7 @@ namespace {
 
         EnableHooks();
         LeaveCriticalSection(&mutex);
+        Logger::Instance().LogInfo("############ StoCMgr initialization completed ############");
     }
 
     void Init() {

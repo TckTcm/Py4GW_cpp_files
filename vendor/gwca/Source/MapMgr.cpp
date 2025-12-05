@@ -131,6 +131,9 @@ namespace {
 
     void Init() {
 
+        //Logger::Instance().LogInfo("############ MapMgrModule initialization started ############");
+
+
         DWORD address = 0;
         SkipCinematic_Func = (Void_pt)Scanner::Find("\x8b\x40\x30\x83\x78\x04\x00", "xxxxxxx", -0x5);
 
@@ -184,28 +187,30 @@ namespace {
         GWCA_INFO("[SCAN] EnterChallengeMission_Func = %p", EnterChallengeMission_Func);
         GWCA_INFO("[SCAN] CancelEnterChallengeMission_Func = %p", CancelEnterChallengeMission_Func);
 
-		Logger::AssertAddress("MissionMap_UICallback_Func", (uintptr_t)MissionMap_UICallback_Func);
-		Logger::AssertAddress("WorldMap_UICallback_Func", (uintptr_t)WorldMap_UICallback_Func);
-		Logger::AssertAddress("map_type_instance_infos", (uintptr_t)map_type_instance_infos);
-		Logger::AssertAddress("region_id_addr", (uintptr_t)region_id_addr);
-		Logger::AssertAddress("area_info_addr", (uintptr_t)area_info_addr);
-		Logger::AssertAddress("InstanceInfoPtr", (uintptr_t)InstanceInfoPtr);
-		Logger::AssertAddress("QueryAltitude_Func", (uintptr_t)QueryAltitude_Func);
+		Logger::AssertAddress("MissionMap_UICallback_Func", (uintptr_t)MissionMap_UICallback_Func, "Map Module");
+		Logger::AssertAddress("WorldMap_UICallback_Func", (uintptr_t)WorldMap_UICallback_Func, "Map Module");
+		Logger::AssertAddress("map_type_instance_infos", (uintptr_t)map_type_instance_infos, "Map Module");
+		Logger::AssertAddress("region_id_addr", (uintptr_t)region_id_addr, "Map Module");
+		Logger::AssertAddress("area_info_addr", (uintptr_t)area_info_addr, "Map Module");
+		Logger::AssertAddress("InstanceInfoPtr", (uintptr_t)InstanceInfoPtr, "Map Module");
+		Logger::AssertAddress("QueryAltitude_Func", (uintptr_t)QueryAltitude_Func, "Map Module");
 		if (!bypass_tolerance_patch.IsValid())
 			Logger::Instance().LogError("Failed to patch altitude tolerance check, address not found.");
 
-		Logger::AssertAddress("EnterChallengeMission_Func", (uintptr_t)EnterChallengeMission_Func);
-		Logger::AssertAddress("CancelEnterChallengeMission_Func", (uintptr_t)CancelEnterChallengeMission_Func);
+		Logger::AssertAddress("EnterChallengeMission_Func", (uintptr_t)EnterChallengeMission_Func, "Map Module");
+		Logger::AssertAddress("CancelEnterChallengeMission_Func", (uintptr_t)CancelEnterChallengeMission_Func, "Map Module");
 
 
         if (WorldMap_UICallback_Func)
-            Logger::AssertHook("WorldMap_UICallback_Func",GW::HookBase::CreateHook((void**)&WorldMap_UICallback_Func, OnWorldMap_UICallback, (void**)&WorldMap_UICallback_Ret));
+            Logger::AssertHook("WorldMap_UICallback_Func",GW::HookBase::CreateHook((void**)&WorldMap_UICallback_Func, OnWorldMap_UICallback, (void**)&WorldMap_UICallback_Ret), "Map Module");
         if (MissionMap_UICallback_Func)
-            Logger::AssertHook("MissionMap_UICallback_Func",GW::HookBase::CreateHook((void**)&MissionMap_UICallback_Func, OnMissionMap_UICallback, (void**)&MissionMap_UICallback_Ret));
+            Logger::AssertHook("MissionMap_UICallback_Func",GW::HookBase::CreateHook((void**)&MissionMap_UICallback_Func, OnMissionMap_UICallback, (void**)&MissionMap_UICallback_Ret), "Map Module");
         if (EnterChallengeMission_Func) {
-            Logger::AssertHook("EnterChallengeMission_Func",GW::HookBase::CreateHook((void**)&EnterChallengeMission_Func, OnEnterChallengeMission_Hook, (void**)&EnterChallengeMission_Ret));
+            Logger::AssertHook("EnterChallengeMission_Func",GW::HookBase::CreateHook((void**)&EnterChallengeMission_Func, OnEnterChallengeMission_Hook, (void**)&EnterChallengeMission_Ret), "Map Module");
             UI::RegisterUIMessageCallback(&EnterChallengeMission_Entry, UI::UIMessage::kSendEnterMission, OnEnterChallengeMission_UIMessage, 0x1);
         }
+
+        //Logger::Instance().LogInfo("############ MapMgrModule initialization completed ############");
     }
     void EnableHooks() {
         if (EnterChallengeMission_Func)

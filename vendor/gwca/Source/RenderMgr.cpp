@@ -105,22 +105,21 @@ namespace {
 
     void Init()
     {
+        //Logger::Instance().LogInfo("############ RenderMgrModule initialization started ############");
         InitializeCriticalSection(&mutex);
 
         // Locate function addresses
         GwReset_Func = (GwReset_pt)Scanner::ToFunctionStart(Scanner::Find("\x3B\x4D\xB4\x89", "xxxx"), 0xfff);
         //GwReset_Func = (GwReset_pt)Scanner::ToFunctionStart(Scanner::Find("\x75\x14\x68\xca\x03\x00\x00", "xxxxxxx"));
+		Logger::AssertAddress("GwReset_Func", (uintptr_t)GwReset_Func, "RenderModule");
         
         //GwEndScene_Func = (GwEndScene_pt)Scanner::ToFunctionStart(Scanner::Find("\x75\x28\x68\x8c\x08\x00\x00", "xxxxxxx"));
 		GwEndScene_Func = (GwEndScene_pt)Scanner::ToFunctionStart(Scanner::Find("\x75\x28\x68\xc4\x06\x00\x00", "xxxxxxx"));
+		Logger::AssertAddress("GwEndScene_Func", (uintptr_t)GwEndScene_Func, "RenderModule");
         GwGetTransform_func = (GwGetTransform_pt)Scanner::ToFunctionStart(Scanner::Find("\x7c\x14\x68\xdb\x02\x00\x00", "xxxxxxx"));
+        Logger::AssertAddress("GwGetTransform_func", (uintptr_t)GwGetTransform_func, "RenderModule");
         ScreenCapture_Func = (GwEndScene_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("Dx9Dev.cpp", "No valid case for switch variable 'mode.Format'", 0, 0), 0xfff);
-
-        // Log the addresses as void* to ensure they appear in logs
-		Logger::AssertAddress("GwGetTransform_func", (uintptr_t)GwGetTransform_func);
-		Logger::AssertAddress("GwReset_Func", (uintptr_t)GwReset_Func);
-		Logger::AssertAddress("GwEndScene_Func", (uintptr_t)GwEndScene_Func);
-		Logger::AssertAddress("ScreenCapture_Func", (uintptr_t)ScreenCapture_Func);
+		Logger::AssertAddress("ScreenCapture_Func", (uintptr_t)ScreenCapture_Func, "RenderModule");
         
 
         /*
@@ -175,18 +174,19 @@ namespace {
         if (GwEndScene_Func) {
             //bool success = HookBase::CreateHookRaw((void**)&GwEndScene_Func, OnGwEndScene, (void**)&RetGwEndScene);
             int success = HookBase::CreateHook((void**)&GwEndScene_Func, OnGwEndScene, (void**)&RetGwEndScene);
-			Logger::AssertHook("GwEndScene_Func", success);
+			Logger::AssertHook("GwEndScene_Func", success, "RenderModule");
 
         }
         if (ScreenCapture_Func) {
             int success = HookBase::CreateHook((void**)&ScreenCapture_Func, OnScreenCapture, (void**)&RetScreenCapture);
-			Logger::AssertHook("RenderMgr: ScreenCapture_Func", success);
+			Logger::AssertHook("RenderMgr: ScreenCapture_Func", success, "RenderModule");
         }
         if (GwReset_Func) {
             int success = HookBase::CreateHook((void**)&GwReset_Func, OnGwReset, (void**)&RetGwReset);
-			Logger::AssertHook("RenderMgr: GwReset_Func", success);
+			Logger::AssertHook("RenderMgr: GwReset_Func", success, "RenderModule");
         }
 
+        //Logger::Instance().LogInfo("############ RenderMgrModule initialization complete ############");
 
     }
 

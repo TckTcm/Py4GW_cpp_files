@@ -65,18 +65,19 @@ namespace {
 
 
     void Init() {
-
+        //Logger::Instance().LogInfo("############ EventMgr initialization started ############");
         uintptr_t address = Scanner::Find("\x68\x08\x08\x00\x00\x8d\x85\xf4\xf7\xff\xff", "xxxxxxxxxxx", 0x16);
         SendEventMessage_Func = (SendEventMessage_pt)Scanner::FunctionFromNearCall(address);
-		Logger::AssertAddress("SendEventMessage_Func", (uintptr_t)SendEventMessage_Func);
+		Logger::AssertAddress("SendEventMessage_Func", (uintptr_t)SendEventMessage_Func, "Event Module");
         int result = HookBase::CreateHook((void**)&SendEventMessage_Func, OnSendEventMessage, (void**)&SendEventMessage_Ret);
-		Logger::AssertHook("SendEventMessage_Func", result);
+		Logger::AssertHook("SendEventMessage_Func", result, "Event Module");
 
         GWCA_INFO("[SCAN] SendEventMessage_Func = %p", SendEventMessage_Func);
 
 #ifdef _DEBUG
         GWCA_ASSERT(SendEventMessage_Func);
 #endif
+        //Logger::Instance().LogInfo("############ EventMgr initialization completed ############");
     }
 
     void EnableHooks() {

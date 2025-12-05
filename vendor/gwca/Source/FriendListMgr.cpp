@@ -113,7 +113,7 @@ namespace {
     uintptr_t FriendList_Addr;
 
     void Init() {
-
+        //Logger::Instance().LogInfo("############ FriendListMgr initialization started ############");
         uintptr_t address = 0;
 
         address = Scanner::FindAssertion("FriendApi.cpp", "friendName && *friendName",0,0);
@@ -149,14 +149,15 @@ namespace {
         GWCA_ASSERT(AddFriend_Func);
         GWCA_ASSERT(RemoveFriend_Func);
 #endif
-		Logger::AssertAddress("FriendList_Addr", FriendList_Addr);
-		Logger::AssertAddress("FriendEventHandler_Func", (uintptr_t)FriendEventHandler_Func);
-		Logger::AssertAddress("SetOnlineStatus_Func", (uintptr_t)SetOnlineStatus_Func);
-		Logger::AssertAddress("AddFriend_Func", (uintptr_t)AddFriend_Func);
-		Logger::AssertAddress("RemoveFriend_Func", (uintptr_t)RemoveFriend_Func);
+		Logger::AssertAddress("FriendList_Addr", FriendList_Addr, "FriendList Module");
+		Logger::AssertAddress("FriendEventHandler_Func", (uintptr_t)FriendEventHandler_Func, "FriendList Module");
+		Logger::AssertAddress("SetOnlineStatus_Func", (uintptr_t)SetOnlineStatus_Func, "FriendList Module");
+		Logger::AssertAddress("AddFriend_Func", (uintptr_t)AddFriend_Func, "FriendList Module");
+		Logger::AssertAddress("RemoveFriend_Func", (uintptr_t)RemoveFriend_Func, "FriendList Module");
 
         if(FriendEventHandler_Func)
-			Logger::AssertHook("FriendEventHandler_Func", HookBase::CreateHook((void**)&FriendEventHandler_Func, OnFriendEventHandler, (void**)&FriendEventHandler_Ret));
+			Logger::AssertHook("FriendEventHandler_Func", HookBase::CreateHook((void**)&FriendEventHandler_Func, OnFriendEventHandler, (void**)&FriendEventHandler_Ret), "FriendList Module");
+        //Logger::Instance().LogInfo("############ FriendListMgr initialization completed ############");
     }
 
     void EnableHooks() {

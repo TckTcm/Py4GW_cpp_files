@@ -57,22 +57,26 @@ namespace {
     RequestQuestData_pt RequestQuestData_Func = 0;
 
     void Init() {
+        //Logger::Instance().LogInfo("############ QuestMgr initialization started ############");
         DWORD address = 0;
 
-        address = Scanner::Find("\x74\x14\x68\x33\x01\x00\x00", "xxxxxx", 0x19);
+        //address = Scanner::Find("\x74\x14\x68\x33\x01\x00\x00", "xxxxxx", 0x19);
+        address = Scanner::Find("\xC7\x45\xF8\x02\x00\x00\x00\x50\xC7", "xxxxxxxxx", -0x45);
         AbandonQuest_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
 
-        address = Scanner::Find("\x75\x14\x68\x5d\x10\x00\x00", "xxxxxxx");
+        //address = Scanner::Find("\x75\x14\x68\x5d\x10\x00\x00", "xxxxxxx");
+        address = Scanner::Find("\x75\x14\x68\x61\x10\x00\x00", "xxxxxxx");
         if (address) {
             address = Scanner::FindInRange("\xe8\x77\x65\x0e\x00\x83\xc4\x08", "x????xxx", 0, address, address + 0xff);
             RequestQuestData_Func = (RequestQuestData_pt)Scanner::FunctionFromNearCall(address);
         }
-        if(address)
+        if (address)
             address = Scanner::FindInRange("\x55\x8b\xec", "xxx", 0, address, address - 0xff);
         SetActiveQuest_Func = (DoAction_pt)address;
 
 
-        address = Scanner::Find("\x75\x14\x68\x4b\x10\x00\x00", "xxxxxxx");
+        //address = Scanner::Find("\x75\x14\x68\x4b\x10\x00\x00", "xxxxxxx");
+        address = Scanner::Find("\x75\x14\x68\x4f\x10\x00\x00", "xxxxxxx");
         if (address)
             address = Scanner::FindInRange("\x55\x8b\xec", "xxx", 0, address, address - 0xff);
         if (address)
@@ -89,21 +93,22 @@ namespace {
         GWCA_ASSERT(RequestQuestData_Func);
         GWCA_ASSERT(RequestQuestInfo_Func);
 #endif
-		Logger::AssertAddress("AbandonQuest_Func", (uintptr_t)AbandonQuest_Func);
-		Logger::AssertAddress("SetActiveQuest_Func", (uintptr_t)SetActiveQuest_Func);
-		Logger::AssertAddress("RequestQuestData_Func", (uintptr_t)RequestQuestData_Func);
-		Logger::AssertAddress("RequestQuestInfo_Func", (uintptr_t)RequestQuestInfo_Func);
+		Logger::AssertAddress("AbandonQuest_Func", (uintptr_t)AbandonQuest_Func, "Quest Module");
+		Logger::AssertAddress("SetActiveQuest_Func", (uintptr_t)SetActiveQuest_Func, "Quest Module");
+		Logger::AssertAddress("RequestQuestData_Func", (uintptr_t)RequestQuestData_Func, "Quest Module");
+		Logger::AssertAddress("RequestQuestInfo_Func", (uintptr_t)RequestQuestInfo_Func, "Quest Module");
 
         if (AbandonQuest_Func) {
             int result = HookBase::CreateHook((void**)&AbandonQuest_Func, OnAbandonQuest, (void**)&AbandonQuest_Ret);
-			Logger::AssertHook("AbandonQuest_Func", result);
+			Logger::AssertHook("AbandonQuest_Func", result, "Quest Module");
             UI::RegisterUIMessageCallback(&AbandonQuest_HookEntry, UI::UIMessage::kSendAbandonQuest, OnAbandonQuest_UIMessage, 0x1);
         }
         if (SetActiveQuest_Func) {
             int result = HookBase::CreateHook((void**)&SetActiveQuest_Func, OnSetActiveQuest, (void**)&SetActiveQuest_Ret);
-			Logger::AssertHook("SetActiveQuest_Func", result);
+			Logger::AssertHook("SetActiveQuest_Func", result, "Quest Module");
             UI::RegisterUIMessageCallback(&SetActiveQuest_HookEntry, UI::UIMessage::kSendSetActiveQuest, OnSetActiveQuest_UIMessage, 0x1);
         }
+        //Logger::Instance().LogInfo("############ QuestMgr initialization completed ############");
 
     }
     void EnableHooks() {

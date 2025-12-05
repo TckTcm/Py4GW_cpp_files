@@ -326,13 +326,15 @@ namespace {
 
 
     void Init() {
+
+        //Logger::Instance().LogInfo("############ UIMgrModule initialization started ############");
+
+
         uintptr_t address;
 
         address = Scanner::FindAssertion("\\Code\\Engine\\Frame\\FrMsg.cpp", "frame", 0, -0x14);
         if (address)
             s_FrameArray = *(GW::Array<UI::Frame*>**)address;
-
-
 
         address = Scanner::Find("\x81\x0D\xFF\xFF\xFF\xFF\x00\x00\x08\x00", "xx????xxxx", 2);
         if (address && Scanner::IsValidPtr(*(uintptr_t*)address))
@@ -494,8 +496,7 @@ namespace {
         address = GW::Scanner::Find("\x74\x12\x6a\x16\x6a\x00", "xxxxxx", 0x6);
         GetGraphicsRendererValue_Func = (GetGraphicsRendererValue_pt)GW::Scanner::FunctionFromNearCall(address);
         //SetGraphicsRendererValue_Func = (SetGraphicsRendererValue_pt)Scanner::ToFunctionStart(Scanner::Find("\x68\x75\x0a\x00\x00", "xxxxx"));
-        SetGraphicsRendererValue_Func = (SetGraphicsRendererValue_pt)Scanner::ToFunctionStart(Scanner::Find("\x68\x8e\x07\x00\x00\xba\xc8\xfe", "xxxxxxxx"));
-
+        SetGraphicsRendererValue_Func = (SetGraphicsRendererValue_pt)Scanner::ToFunctionStart(Scanner::Find("\x8D\x47\xE9\xF7", "xxxx"));
 
         address = GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Dialog\\DlgOptGr.cpp", "multiSampleIndex != CTL_DROPLIST_INDEX_NULL", 0, -0x46);
         SetGameRendererMode_Func = (SetGameRendererMode_pt)GW::Scanner::FunctionFromNearCall(address);
@@ -552,94 +553,97 @@ namespace {
         GWCA_INFO("[SCAN] SetGameRendererMode_Func = %p", SetGameRendererMode_Func);
         GWCA_INFO("[SCAN] GetGameRendererMetric_Func = %p", GetGameRendererMetric_Func);
 
-        Logger::AssertAddress("s_FrameArray", (uintptr_t)s_FrameArray);
-        Logger::AssertAddress("WorldMapState_Addr", (uintptr_t)WorldMapState_Addr);
-        Logger::AssertAddress("SendFrameUIMessageById_Func", (uintptr_t)SendFrameUIMessageById_Func);
-        Logger::AssertAddress("SendFrameUIMessage_Func", (uintptr_t)SendFrameUIMessage_Func);
-        Logger::AssertAddress("CreateHashFromWchar_Func", (uintptr_t)CreateHashFromWchar_Func);
-        Logger::AssertAddress("GetChildFrameId_Func", (uintptr_t)GetChildFrameId_Func);
-        Logger::AssertAddress("GetRootFrame_Func", (uintptr_t)GetRootFrame_Func);
-        Logger::AssertAddress("SendUIMessage_Func", (uintptr_t)SendUIMessage_Func);
-        Logger::AssertAddress("LoadSettings_Func", (uintptr_t)LoadSettings_Func);
-        Logger::AssertAddress("ui_drawn_addr", (uintptr_t)ui_drawn_addr);
-        Logger::AssertAddress("shift_screen_addr", (uintptr_t)shift_screen_addr);
-        Logger::AssertAddress("PreferencesInitialised_Addr", (uintptr_t)PreferencesInitialised_Addr);
-        Logger::AssertAddress("GetCommandLineFlag_Func", (uintptr_t)GetCommandLineFlag_Func);
-        Logger::AssertAddress("GetCommandLineString_Func", (uintptr_t)GetCommandLineString_Func);
-        Logger::AssertAddress("GetStringPreference_Func", (uintptr_t)GetStringPreference_Func);
-        Logger::AssertAddress("GetFlagPreference_Func", (uintptr_t)GetFlagPreference_Func);
-        Logger::AssertAddress("GetEnumPreference_Func", (uintptr_t)GetEnumPreference_Func);
-        Logger::AssertAddress("GetNumberPreference_Func", (uintptr_t)GetNumberPreference_Func);
-        Logger::AssertAddress("GetCommandLineNumber_Func", (uintptr_t)GetCommandLineNumber_Func);
-        Logger::AssertAddress("CommandLineNumber_Buffer", (uintptr_t)CommandLineNumber_Buffer);
-        Logger::AssertAddress("SetInGameShadowQuality_Func", (uintptr_t)SetInGameShadowQuality_Func);
-        Logger::AssertAddress("SetInGameUIScale_Func", (uintptr_t)SetInGameUIScale_Func);
-        Logger::AssertAddress("SetStringPreference_Func", (uintptr_t)SetStringPreference_Func);
-        Logger::AssertAddress("SetEnumPreference_Func", (uintptr_t)SetEnumPreference_Func);
-        Logger::AssertAddress("SetFlagPreference_Func", (uintptr_t)SetFlagPreference_Func);
-        Logger::AssertAddress("SetNumberPreference_Func", (uintptr_t)SetNumberPreference_Func);
-        Logger::AssertAddress("SetInGameStaticPreference_Func", (uintptr_t)SetInGameStaticPreference_Func);
-        Logger::AssertAddress("TriggerTerrainRerender_Func", (uintptr_t)TriggerTerrainRerender_Func);
-        Logger::AssertAddress("EnumPreferenceOptions_Addr", (uintptr_t)EnumPreferenceOptions_Addr);
-        Logger::AssertAddress("NumberPreferenceOptions_Addr", (uintptr_t)NumberPreferenceOptions_Addr);
-        Logger::AssertAddress("SetTooltip_Func", (uintptr_t)SetTooltip_Func);
-        Logger::AssertAddress("CurrentTooltipPtr", (uintptr_t)CurrentTooltipPtr);
-        Logger::AssertAddress("GameSettings_Addr", (uintptr_t)GameSettings_Addr);
-        Logger::AssertAddress("SetWindowVisible_Func", (uintptr_t)SetWindowVisible_Func);
-        Logger::AssertAddress("SetWindowPosition_Func", (uintptr_t)SetWindowPosition_Func);
-        Logger::AssertAddress("window_positions_array", (uintptr_t)window_positions_array);
+        
+        Logger::AssertAddress("s_FrameArray", (uintptr_t)s_FrameArray, "UIModule");
+        Logger::AssertAddress("WorldMapState_Addr", (uintptr_t)WorldMapState_Addr, "UIModule");
+        Logger::AssertAddress("SendFrameUIMessageById_Func", (uintptr_t)SendFrameUIMessageById_Func, "UIModule");
+        Logger::AssertAddress("SendFrameUIMessage_Func", (uintptr_t)SendFrameUIMessage_Func, "UIModule");
+        Logger::AssertAddress("CreateHashFromWchar_Func", (uintptr_t)CreateHashFromWchar_Func, "UIModule");
+        Logger::AssertAddress("GetChildFrameId_Func", (uintptr_t)GetChildFrameId_Func, "UIModule");
+        Logger::AssertAddress("GetRootFrame_Func", (uintptr_t)GetRootFrame_Func, "UIModule");
+        Logger::AssertAddress("SendUIMessage_Func", (uintptr_t)SendUIMessage_Func, "UIModule");
+        Logger::AssertAddress("LoadSettings_Func", (uintptr_t)LoadSettings_Func, "UIModule");
+        Logger::AssertAddress("ui_drawn_addr", (uintptr_t)ui_drawn_addr, "UIModule");
+        Logger::AssertAddress("shift_screen_addr", (uintptr_t)shift_screen_addr, "UIModule");
+        Logger::AssertAddress("PreferencesInitialised_Addr", (uintptr_t)PreferencesInitialised_Addr, "UIModule");
+        Logger::AssertAddress("GetCommandLineFlag_Func", (uintptr_t)GetCommandLineFlag_Func, "UIModule");
+        Logger::AssertAddress("GetCommandLineString_Func", (uintptr_t)GetCommandLineString_Func, "UIModule");
+        Logger::AssertAddress("GetStringPreference_Func", (uintptr_t)GetStringPreference_Func, "UIModule");
+        Logger::AssertAddress("GetFlagPreference_Func", (uintptr_t)GetFlagPreference_Func, "UIModule");
+        Logger::AssertAddress("GetEnumPreference_Func", (uintptr_t)GetEnumPreference_Func, "UIModule");
+        Logger::AssertAddress("GetNumberPreference_Func", (uintptr_t)GetNumberPreference_Func, "UIModule");
+        Logger::AssertAddress("GetCommandLineNumber_Func", (uintptr_t)GetCommandLineNumber_Func, "UIModule");
+        Logger::AssertAddress("CommandLineNumber_Buffer", (uintptr_t)CommandLineNumber_Buffer, "UIModule");
+        Logger::AssertAddress("SetInGameShadowQuality_Func", (uintptr_t)SetInGameShadowQuality_Func, "UIModule");
+        Logger::AssertAddress("SetInGameUIScale_Func", (uintptr_t)SetInGameUIScale_Func, "UIModule");
+        Logger::AssertAddress("SetStringPreference_Func", (uintptr_t)SetStringPreference_Func, "UIModule");
+        Logger::AssertAddress("SetEnumPreference_Func", (uintptr_t)SetEnumPreference_Func, "UIModule");
+        Logger::AssertAddress("SetFlagPreference_Func", (uintptr_t)SetFlagPreference_Func, "UIModule");
+        Logger::AssertAddress("SetNumberPreference_Func", (uintptr_t)SetNumberPreference_Func, "UIModule");
+        Logger::AssertAddress("SetInGameStaticPreference_Func", (uintptr_t)SetInGameStaticPreference_Func, "UIModule");
+        Logger::AssertAddress("TriggerTerrainRerender_Func", (uintptr_t)TriggerTerrainRerender_Func, "UIModule");
+        Logger::AssertAddress("EnumPreferenceOptions_Addr", (uintptr_t)EnumPreferenceOptions_Addr, "UIModule");
+        Logger::AssertAddress("NumberPreferenceOptions_Addr", (uintptr_t)NumberPreferenceOptions_Addr, "UIModule");
+        Logger::AssertAddress("SetTooltip_Func", (uintptr_t)SetTooltip_Func, "UIModule");
+        Logger::AssertAddress("CurrentTooltipPtr", (uintptr_t)CurrentTooltipPtr, "UIModule");
+        Logger::AssertAddress("GameSettings_Addr", (uintptr_t)GameSettings_Addr, "UIModule");
+        Logger::AssertAddress("SetWindowVisible_Func", (uintptr_t)SetWindowVisible_Func, "UIModule");
+        Logger::AssertAddress("SetWindowPosition_Func", (uintptr_t)SetWindowPosition_Func, "UIModule");
+        Logger::AssertAddress("window_positions_array", (uintptr_t)window_positions_array, "UIModule");
 
-        Logger::AssertAddress("GetStringPreference_Func", (uintptr_t)GetStringPreference_Func);
-        Logger::AssertAddress("GetEnumPreference_Func", (uintptr_t)GetEnumPreference_Func);
-        Logger::AssertAddress("GetNumberPreference_Func", (uintptr_t)GetNumberPreference_Func);
-        Logger::AssertAddress("GetFlagPreference_Func", (uintptr_t)GetFlagPreference_Func);
-        Logger::AssertAddress("SetStringPreference_Func", (uintptr_t)SetStringPreference_Func);
-        Logger::AssertAddress("SetEnumPreference_Func", (uintptr_t)SetEnumPreference_Func);
-        Logger::AssertAddress("SetNumberPreference_Func", (uintptr_t)SetNumberPreference_Func);
-        Logger::AssertAddress("SetFlagPreference_Func", (uintptr_t)SetFlagPreference_Func);
-        Logger::AssertAddress("WorldMapState_Addr", (uintptr_t)WorldMapState_Addr);
-        Logger::AssertAddress("SendFrameUIMessage_Func", (uintptr_t)SendFrameUIMessage_Func);
-        Logger::AssertAddress("SendUIMessage_Func", (uintptr_t)SendUIMessage_Func);
-        Logger::AssertAddress("LoadSettings_Func", (uintptr_t)LoadSettings_Func);
-        Logger::AssertAddress("ui_drawn_addr", (uintptr_t)ui_drawn_addr);
-        Logger::AssertAddress("shift_screen_addr", (uintptr_t)shift_screen_addr);
-        Logger::AssertAddress("SetTooltip_Func", (uintptr_t)SetTooltip_Func);
-        Logger::AssertAddress("CurrentTooltipPtr", (uintptr_t)CurrentTooltipPtr);
-        Logger::AssertAddress("GameSettings_Addr", (uintptr_t)GameSettings_Addr);
-        Logger::AssertAddress("SetWindowVisible_Func", (uintptr_t)SetWindowVisible_Func);
-        Logger::AssertAddress("SetWindowPosition_Func", (uintptr_t)SetWindowPosition_Func);
-        Logger::AssertAddress("window_positions_array", (uintptr_t)window_positions_array);
-        Logger::AssertAddress("ValidateAsyncDecodeStr", (uintptr_t)ValidateAsyncDecodeStr);
-        Logger::AssertAddress("AsyncDecodeStringPtr", (uintptr_t)AsyncDecodeStringPtr);
-        Logger::AssertAddress("SetVolume_Func", (uintptr_t)SetVolume_Func);
-        Logger::AssertAddress("SetMasterVolume_Func", (uintptr_t)SetMasterVolume_Func);
-        Logger::AssertAddress("DrawOnCompass_Func", (uintptr_t)DrawOnCompass_Func);
-        Logger::AssertAddress("CreateUIComponent_Func", (uintptr_t)CreateUIComponent_Func);
-        Logger::AssertAddress("EnumPreferenceOptions_Addr", (uintptr_t)EnumPreferenceOptions_Addr);
-        Logger::AssertAddress("NumberPreferenceOptions_Addr", (uintptr_t)NumberPreferenceOptions_Addr);
-        Logger::AssertAddress("SetInGameStaticPreference_Func", (uintptr_t)SetInGameStaticPreference_Func);
-        Logger::AssertAddress("SetInGameUIScale_Func", (uintptr_t)SetInGameUIScale_Func);
-        Logger::AssertAddress("PreferencesInitialised_Addr", (uintptr_t)PreferencesInitialised_Addr);
-        Logger::AssertAddress("GetRootFrame_Func", (uintptr_t)GetRootFrame_Func);
+        Logger::AssertAddress("GetStringPreference_Func", (uintptr_t)GetStringPreference_Func, "UIModule");
+        Logger::AssertAddress("GetEnumPreference_Func", (uintptr_t)GetEnumPreference_Func, "UIModule");
+        Logger::AssertAddress("GetNumberPreference_Func", (uintptr_t)GetNumberPreference_Func, "UIModule");
+        Logger::AssertAddress("GetFlagPreference_Func", (uintptr_t)GetFlagPreference_Func, "UIModule");
+        Logger::AssertAddress("SetStringPreference_Func", (uintptr_t)SetStringPreference_Func, "UIModule");
+        Logger::AssertAddress("SetEnumPreference_Func", (uintptr_t)SetEnumPreference_Func, "UIModule");
+        Logger::AssertAddress("SetNumberPreference_Func", (uintptr_t)SetNumberPreference_Func, "UIModule");
+        Logger::AssertAddress("SetFlagPreference_Func", (uintptr_t)SetFlagPreference_Func, "UIModule");
+        Logger::AssertAddress("WorldMapState_Addr", (uintptr_t)WorldMapState_Addr, "UIModule");
+        Logger::AssertAddress("SendFrameUIMessage_Func", (uintptr_t)SendFrameUIMessage_Func, "UIModule");
+        Logger::AssertAddress("SendUIMessage_Func", (uintptr_t)SendUIMessage_Func, "UIModule");
+        Logger::AssertAddress("LoadSettings_Func", (uintptr_t)LoadSettings_Func, "UIModule");
+        Logger::AssertAddress("ui_drawn_addr", (uintptr_t)ui_drawn_addr, "UIModule");
+        Logger::AssertAddress("shift_screen_addr", (uintptr_t)shift_screen_addr, "UIModule");
+        Logger::AssertAddress("SetTooltip_Func", (uintptr_t)SetTooltip_Func, "UIModule");
+        Logger::AssertAddress("CurrentTooltipPtr", (uintptr_t)CurrentTooltipPtr, "UIModule");
+        Logger::AssertAddress("GameSettings_Addr", (uintptr_t)GameSettings_Addr, "UIModule");
+        Logger::AssertAddress("SetWindowVisible_Func", (uintptr_t)SetWindowVisible_Func, "UIModule");
+        Logger::AssertAddress("SetWindowPosition_Func", (uintptr_t)SetWindowPosition_Func, "UIModule");
+        Logger::AssertAddress("window_positions_array", (uintptr_t)window_positions_array, "UIModule");
+        Logger::AssertAddress("ValidateAsyncDecodeStr", (uintptr_t)ValidateAsyncDecodeStr, "UIModule");
+        Logger::AssertAddress("AsyncDecodeStringPtr", (uintptr_t)AsyncDecodeStringPtr, "UIModule");
+        Logger::AssertAddress("SetVolume_Func", (uintptr_t)SetVolume_Func, "UIModule");
+        Logger::AssertAddress("SetMasterVolume_Func", (uintptr_t)SetMasterVolume_Func, "UIModule");
+        Logger::AssertAddress("DrawOnCompass_Func", (uintptr_t)DrawOnCompass_Func, "UIModule");
+        Logger::AssertAddress("CreateUIComponent_Func", (uintptr_t)CreateUIComponent_Func, "UIModule");
+        Logger::AssertAddress("EnumPreferenceOptions_Addr", (uintptr_t)EnumPreferenceOptions_Addr, "UIModule");
+        Logger::AssertAddress("NumberPreferenceOptions_Addr", (uintptr_t)NumberPreferenceOptions_Addr, "UIModule");
+        Logger::AssertAddress("SetInGameStaticPreference_Func", (uintptr_t)SetInGameStaticPreference_Func, "UIModule");
+        Logger::AssertAddress("SetInGameUIScale_Func", (uintptr_t)SetInGameUIScale_Func, "UIModule");
+        Logger::AssertAddress("PreferencesInitialised_Addr", (uintptr_t)PreferencesInitialised_Addr, "UIModule");
+        Logger::AssertAddress("GetRootFrame_Func", (uintptr_t)GetRootFrame_Func, "UIModule");
 
-        Logger::AssertAddress("GetGraphicsRendererValue_Func", (uintptr_t)GetGraphicsRendererValue_Func);
-        Logger::AssertAddress("SetGraphicsRendererValue_Func", (uintptr_t)SetGraphicsRendererValue_Func);
-        Logger::AssertAddress("SetGameRendererMode_Func", (uintptr_t)SetGameRendererMode_Func);
-        Logger::AssertAddress("GetGameRendererMetric_Func", (uintptr_t)GetGameRendererMetric_Func);
+        Logger::AssertAddress("GetGraphicsRendererValue_Func", (uintptr_t)GetGraphicsRendererValue_Func, "UIModule");
+        Logger::AssertAddress("SetGraphicsRendererValue_Func", (uintptr_t)SetGraphicsRendererValue_Func, "UIModule");
+        Logger::AssertAddress("SetGameRendererMode_Func", (uintptr_t)SetGameRendererMode_Func, "UIModule");
+        Logger::AssertAddress("GetGameRendererMetric_Func", (uintptr_t)GetGameRendererMetric_Func, "UIModule");
 
 
         if (SendUIMessage_Func) 
         HookBase::CreateHook((void**)&SendUIMessage_Func, OnSendUIMessage, (void**)&RetSendUIMessage);
         
         if(CreateUIComponent_Func)
-            Logger::AssertHook("CreateUIComponent_Func", HookBase::CreateHook((void**)&CreateUIComponent_Func, OnCreateUIComponent, (void**)&CreateUIComponent_Ret));
+            Logger::AssertHook("CreateUIComponent_Func", HookBase::CreateHook((void**)&CreateUIComponent_Func, OnCreateUIComponent, (void**)&CreateUIComponent_Ret), "UIModule");
         if(SendFrameUIMessage_Func)
-            Logger::AssertHook("SendFrameUIMessage_Func", HookBase::CreateHook((void**)&SendFrameUIMessage_Func, OnSendFrameUIMessage, (void**)&SendFrameUIMessage_Ret));
+            Logger::AssertHook("SendFrameUIMessage_Func", HookBase::CreateHook((void**)&SendFrameUIMessage_Func, OnSendFrameUIMessage, (void**)&SendFrameUIMessage_Ret), "UIModule");
         if(SendFrameUIMessageById_Func)
-            Logger::AssertHook("SendFrameUIMessageById_Func", HookBase::CreateHook((void**)&SendFrameUIMessageById_Func, OnSendFrameUIMessageById, (void**)&SendFrameUIMessageById_Ret));
+            Logger::AssertHook("SendFrameUIMessageById_Func", HookBase::CreateHook((void**)&SendFrameUIMessageById_Func, OnSendFrameUIMessageById, (void**)&SendFrameUIMessageById_Ret), "UIModule");
         if(DrawOnCompass_Func)
-            Logger::AssertHook("DrawOnCompass_Func", HookBase::CreateHook((void**)&DrawOnCompass_Func, OnDrawOnCompass, (void**)&DrawOnCompass_Ret));
-    }
+            Logger::AssertHook("DrawOnCompass_Func", HookBase::CreateHook((void**)&DrawOnCompass_Func, OnDrawOnCompass, (void**)&DrawOnCompass_Ret), "UIModule");
+    
+        //Logger::Instance().LogInfo("############ UIMgrModule initialization complete ############");
+}
 
     void EnableHooks() {
         if (AsyncDecodeStringPtr)

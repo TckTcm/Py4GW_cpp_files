@@ -66,6 +66,8 @@ namespace {
 
     void Init()
     {
+		//Logger::Instance().LogInfo("############ GamethreadModule started initialization ############");
+        
         InitializeCriticalSection(&mutex);
 
         //uintptr_t address = Scanner::Find("\x8b\x75\x08\xdd\xd9\xf6\xc4\x41","xxxxxxxx",-0x20);
@@ -74,32 +76,14 @@ namespace {
         
         LeaveGameThread_Func = (Render_t)Scanner::ToFunctionStart(Scanner::FindAssertion("FrApi.cpp", "renderElapsed >= 0", 0, 0), 0x300);
 
-		Logger::AssertAddress("LeaveGameThread_Func", (uintptr_t)LeaveGameThread_Func);
+		Logger::AssertAddress("LeaveGameThread_Func", (uintptr_t)LeaveGameThread_Func, "GameThreadMgr");
 
 
         int success = GW::HookBase::CreateHook((void**)&LeaveGameThread_Func, OnLeaveGameThread, (void **)&LeaveGameThread_Ret);
-		Logger::Instance().AssertHook("LeaveGameThread_Func", success);
+		Logger::Instance().AssertHook("LeaveGameThread_Func", success, "GameThreadMgr");
 
 
-        /*
-                uintptr_t address = Scanner::Find("\x2B\xCE\x8B\x15\x00\x00\x00\x00\xF7\xD9\x1B\xC9", "xxxx????xxxx", +4);
-        GWCA_INFO("[SCAN] BasePointerLocation = %p", (void *)address);
-
-#if _DEBUG
-        GWCA_ASSERT(address);
-#endif
-
-        if (Verify(address)) {
-            address = *(uintptr_t *)(address);
-            address = *(uintptr_t *)(address + 0);
-            address = *(uintptr_t *)(address + 0x3C);
-
-            g__thingy = (uintptr_t *)(address + 4);
-            g__thingyret = (Render_t)*g__thingy;
-        }
-        */
-
-
+        //Logger::Instance().LogInfo("############ GamethreadModule initialization complete ############");
 
         initialised = true;
     }
