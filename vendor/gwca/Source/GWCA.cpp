@@ -167,6 +167,7 @@ namespace GW
     void EnableHooks()
     {
         if (!_initialized) return;
+        //return
         HookBase::EnableHooks();
         for (const Module* module : modules) {
             if (module->enable_hooks)

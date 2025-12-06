@@ -64,6 +64,7 @@ namespace {
             HookBase::DisableHooks(PostProcessEffect_Func);
     }
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (PostProcessEffect_Func)
             HookBase::EnableHooks(PostProcessEffect_Func);
     }

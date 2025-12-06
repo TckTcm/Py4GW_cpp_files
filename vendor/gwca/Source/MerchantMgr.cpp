@@ -126,6 +126,7 @@ namespace {
             HookBase::DisableHooks(RequestQuote_func);
     }
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (TransactItem_Func)
             HookBase::EnableHooks(TransactItem_Func);
         if (RequestQuote_func)

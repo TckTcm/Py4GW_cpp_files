@@ -273,7 +273,8 @@ namespace {
 
     void __fastcall OnSendFrameUIMessage(Array<UI::UIInteractionCallback>* frame_callbacks, void*, UI::UIMessage message_id, void* wParam, void* lParam) {
         HookBase::EnterHook();
-        const auto frame = (UI::Frame*)(((uintptr_t)frame_callbacks) - 0xA0);
+        //const auto frame = (UI::Frame*)(((uintptr_t)frame_callbacks) - 0xA0);
+        const auto frame = (UI::Frame*)(((uintptr_t)frame_callbacks) - 0xA8);
         GWCA_ASSERT(&frame->frame_callbacks == frame_callbacks);
         UI::SendFrameUIMessage(frame, message_id, wParam, lParam);
         HookBase::LeaveHook();
@@ -646,6 +647,7 @@ namespace {
 }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (AsyncDecodeStringPtr)
             HookBase::EnableHooks(AsyncDecodeStringPtr);
         if (SetTooltip_Func)

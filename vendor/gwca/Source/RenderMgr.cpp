@@ -192,6 +192,7 @@ namespace {
 
     void EnableHooks()
     {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (GwEndScene_Func)
             HookBase::EnableHooks(GwEndScene_Func);
         if (ScreenCapture_Func)

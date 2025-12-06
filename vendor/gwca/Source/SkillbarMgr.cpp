@@ -155,9 +155,10 @@ namespace {
         */
 
         DWORD address = 0;
-        address = GW::Scanner::FindAssertion("ConstSkill.cpp", "index < arrsize(s_energyTable)", 0, 0);
-        if (address) {
-            skill_array_addr = *(Skill**)address - 0x26;
+        //address = GW::Scanner::FindAssertion("ConstSkill.cpp", "index < arrsize(s_energyTable)", 0, 0);
+		address = GW::Scanner::FunctionFromNearCall(GW::Scanner::Find("\xE8\x00\x00\x00\x00\x33\xC9\x56", "x????xxx"));
+		if (Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
+            skill_array_addr = *(Skill**)(address - 0x2B);
             Logger::AssertAddress("skill_array_addr", (uintptr_t)skill_array_addr, "Skillbar Module");
         }
         else {
@@ -218,6 +219,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (UseSkill_Func)
             HookBase::EnableHooks(UseSkill_Func);
         if (LoadSkills_Func)

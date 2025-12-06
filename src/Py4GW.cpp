@@ -1056,7 +1056,7 @@ void DrawCompactConsole(bool* new_p_open = nullptr) {
 
 std::string GetCredits()
 { 
-    return "Py4GW v2.0.0, Apoguita - 2024,2025";
+    return "Py4GW v3.0.0, Apoguita - 2024,2025";
 }
 
 std::string GetLicense()
@@ -1373,6 +1373,7 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
         }
     }
 
+    
 	bool is_map_loading = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
 
 	if (show_console || is_map_loading) {
@@ -1381,8 +1382,7 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 	else {
 		DrawCompactConsole(&console_open);
 	}
-    //DrawConsole("Py4GW Console", &console_open);
-    
+
     if (first_run) {
         first_run = false;
         console_open = true;
@@ -1391,23 +1391,25 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 		show_modal = false;
 
         Initialize();
+        
         Log("Py4GW", GetCredits(), MessageType::Success);
         Log("Py4GW", "Python interpreter initialized.", MessageType::Success);
-
+        
         reset_merchant_window_item.start();
 
+        
+        //Widget Manager
+        /*
         if (LoadAndExecuteScriptOnce2()) {
             script_state2 = ScriptState::Running;
             script_timer2.reset(); // Reset and start the timer
-            //Log("Py4GW", "Script started.", MessageType::Notice);
         }
         else {
             ResetScriptEnvironment2();
             script_state2 = ScriptState::Stopped;
             script_timer2.stop(); // Stop the timer
-            //Log("Py4GW", "Script stopped.", MessageType::Notice);
         }
-        
+        */
 
         if (!autoexec_file_path.empty()) {
             strcpy(script_path, autoexec_file_path.c_str());
@@ -1426,10 +1428,8 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
                 Log("Py4GW", "Script stopped.", MessageType::Notice);
             }
         }
-
+      
 	}
-
-	//if (!AllowedToRender()) {return;}
 
     if (debug) {
         if (ImGui::Begin("debug window")) {
@@ -1447,7 +1447,7 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
         }
 	    ImGui::End();
     }
-
+    
 	if ((!console_open) && (!show_modal)) {
 		show_modal = true;
         ImGui::OpenPopup("Shutdown");
@@ -1487,7 +1487,7 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
     if (script_state == ScriptState::Running && !script_content.empty()) {
         ExecutePythonScript();
     }
-    
+  
 	if (script_state2 == ScriptState::Running && !script_content2.empty()) {
 		ExecutePythonScript2();
 	}
@@ -1498,8 +1498,6 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
         }
         mixed_deferred.active = false;
     }
-
-    
 }
 
 // Wrapper functions for script control

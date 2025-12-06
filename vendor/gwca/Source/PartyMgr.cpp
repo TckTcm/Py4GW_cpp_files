@@ -98,7 +98,7 @@ namespace {
         
         /*
         address = Scanner::Find("\x8b\x75\x08\x68\x28\x01\x00\x10", "xxxxxxx"); // NB: UI Message 0x10000128 lands within hard mode button ui callback
-        if (address) {
+        if (address) {+
             address = Scanner::FindInRange("\xff\x70\x20\xe8", "xxxx", 3, address, address + 0xff);
             if (address) {
                 SetDifficulty_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
@@ -130,7 +130,8 @@ namespace {
         // Party Window Button Callback functions
         //PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtButtons.cpp", "m_selection.agentId",0,0));
         //PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::Find("\x8D\x77\x24\x56", "xxxx"));
-        PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindUseOfString("selection.agentId"));
+        PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::Find("\x8D\x77\x24\x56", "xxxx"));
+        //PartyWindowButtonCallback_Func = (PartySearchButtonCallback_pt)Scanner::ToFunctionStart(Scanner::FindUseOfString("selection.agentId"));
         Logger::AssertAddress("PartyWindowButtonCallback_Func", (uintptr_t)PartyWindowButtonCallback_Func, "Party Module");
 
         PartyPlayerMember_UICallback = (UI::UIInteractionCallback)Scanner::ToFunctionStart(Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\Party\\PtPlayer.cpp", "No valid case for switch variable '\"\"'", 0, 0), 0xfff);
@@ -203,6 +204,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (TickButtonUICallback)
             HookBase::EnableHooks(TickButtonUICallback);
     }
@@ -400,7 +402,7 @@ namespace GW {
                 return false;
 
             uint32_t wparam[4] = { 0 };
-            wparam[2] = 0x6;
+            wparam[2] = 0x7;
             wparam[1] = 0x1;
 
             uint32_t ctx[13] = { 0 };

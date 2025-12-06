@@ -339,8 +339,9 @@ namespace {
 
 
         //address = Scanner::Find("\x6a\x06\x68\x00\x03\x80\x00","xxxxxxx",-0x4);
-        //if (address && Scanner::IsValidPtr(*(uintptr_t*)address, ScannerSection::Section_TEXT))
-        //    UICallback_AssignEditableText_Func = *(UI::UIInteractionCallback*)address;
+        //address = Scanner::Find("\xFF\x76\x54\x53", "xxxx", -0x86);
+        //if (address)
+        //  UICallback_AssignEditableText_Func = *(UI::UIInteractionCallback*)address;
 
         UICallback_AssignEditableText_Func = (UI::UIInteractionCallback)Scanner::ToFunctionStart(Scanner::FindUseOfString("readOnly"));
 
@@ -418,6 +419,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         EnableHook(UICallback_ChatLogLine_Func);
         EnableHook(StartWhisper_Func);
         EnableHook(GetSenderColor_Func);

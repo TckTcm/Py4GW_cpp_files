@@ -161,6 +161,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (FriendEventHandler_Func)
             HookBase::EnableHooks(FriendEventHandler_Func);
     }

@@ -93,7 +93,7 @@ namespace {
     }
 
     void EnableHooks() {
-
+        //return; // Temporarily disable gamethread hooks to investigate issues
     }
 
     void DisableHooks() {

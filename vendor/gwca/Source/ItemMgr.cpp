@@ -281,7 +281,7 @@ namespace {
         ChangeEquipmentVisibility_Func = (ChangeEquipmentVisibility_pt)Scanner::FunctionFromNearCall(address);
 
         //address = Scanner::Find("\x68\x21\x03\x00\x00\x89\x45\xfc", "xxxxxxxx", 0x3a);
-        address = Scanner::Find("\x68\x21\x03\x00\x00\x89\x45\xfc", "xxxxxxxx", 0x3c);
+        address = Scanner::Find("\x68\x21\x03\x00\x00\x89\x45\xfc", "xxxxxxxx", 0x3C);
         ChangeGold_Func = (ChangeGold_pt)Scanner::FunctionFromNearCall(address);
 
         address = Scanner::Find("\x83\xc9\x01\x89\x4b\x24", "xxxxxx", 0x28);
@@ -390,6 +390,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (OnSalvagePopup_UICallback_Func)
             HookBase::EnableHooks(OnSalvagePopup_UICallback_Func);
         if (ItemClick_Func)

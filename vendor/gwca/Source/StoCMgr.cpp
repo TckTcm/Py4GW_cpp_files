@@ -107,6 +107,7 @@ namespace {
     }
 
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         EnterCriticalSection(&mutex);
         hooks_enabled = true;
         // Hook any packet entries that have already been registered

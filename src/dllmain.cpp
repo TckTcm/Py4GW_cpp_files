@@ -60,7 +60,7 @@ bool DLLMain::Initialize() {
 		Logger::Instance().LogError("[DLLMain] Failed to initialize GWCA");
 		return false;
 	}
-
+    
     // Get Guild Wars window handle
     if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to get GW window handle...");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
@@ -72,7 +72,8 @@ bool DLLMain::Initialize() {
     {
         if (!initialized) Logger::Instance().LogInfo("[DLLMain] GW window handle obtained successfully.");
     }
-
+    
+    
     // Attach render hook
     if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to attach render hook...");
     if (!AttachRenderHook()) {
@@ -83,7 +84,8 @@ bool DLLMain::Initialize() {
 	{
         if (!initialized) Logger::Instance().LogInfo("[DLLMain] Render hook attached successfully.");
 	}
-
+    
+    
     // Attach window procedure hook
     if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to attach window procedure hook...");
     if (!AttachWndProc()) {
@@ -94,7 +96,8 @@ bool DLLMain::Initialize() {
 	{
         if (!initialized) Logger::Instance().LogInfo("[DLLMain] Window procedure hook attached successfully.");
 	}
-
+    
+    
     running = true;
     initialized = true;
     last_tick = GetTickCount64();

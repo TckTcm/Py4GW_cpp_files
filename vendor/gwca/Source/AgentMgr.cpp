@@ -196,6 +196,7 @@ namespace {
 
     }
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (DoWorldActon_Func)
             HookBase::EnableHooks(DoWorldActon_Func);
         if (SendAgentDialog_Func)

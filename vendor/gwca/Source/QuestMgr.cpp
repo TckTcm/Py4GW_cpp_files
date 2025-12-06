@@ -61,7 +61,8 @@ namespace {
         DWORD address = 0;
 
         //address = Scanner::Find("\x74\x14\x68\x33\x01\x00\x00", "xxxxxx", 0x19);
-        address = Scanner::Find("\xC7\x45\xF8\x02\x00\x00\x00\x50\xC7", "xxxxxxxxx", -0x45);
+        //address = Scanner::Find("\xC7\x45\xF8\x02\x00\x00\x00\x50\xC7", "xxxxxxxxx", -0x45);
+        address = Scanner::Find("\xC7\x45\xF8\x02\x00\x00\x00\x50\xC7", "xxxxxxxxx", +0x55);
         AbandonQuest_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
 
         //address = Scanner::Find("\x75\x14\x68\x5d\x10\x00\x00", "xxxxxxx");
@@ -112,6 +113,7 @@ namespace {
 
     }
     void EnableHooks() {
+        //return; // Temporarily disable gamethread hooks to investigate issues
         if (AbandonQuest_Func)
             HookBase::EnableHooks(AbandonQuest_Func);
         if (SetActiveQuest_Func)

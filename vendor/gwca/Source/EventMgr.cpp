@@ -81,6 +81,7 @@ namespace {
     }
 
     void EnableHooks() {
+        return; // Temporarily disable gamethread hooks to investigate issues
         if (SendEventMessage_Func)
             HookBase::EnableHooks(SendEventMessage_Func);
     }
