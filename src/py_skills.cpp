@@ -3,6 +3,7 @@
 void Skill::GetContext() {
     auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(ID.ID));
     if (skill) {
+        
         CampaignData = static_cast<int>(skill->campaign);
         Type = static_cast<int>(skill->type);
         Special = skill->special;
@@ -14,7 +15,7 @@ void Skill::GetContext() {
         Profession = static_cast<int>(skill->profession);
 
         Attribute = AttributeClass(static_cast<int>(skill->attribute));
-
+        
         Title = skill->title;
         IDPvP = static_cast<int>(skill->skill_id_pvp);
         Combo = skill->combo;
@@ -44,6 +45,7 @@ void Skill::GetContext() {
         ProjectileAnimation2ID = skill->projectile_animation_2_id;
         IconFileID = skill->icon_file_id;
         IconFileID2 = skill->icon_file_id_2;
+		IconFileIDHiRes = skill->icon_file_id_hi_res;
         NameID = skill->name;
         Concise = skill->concise;
         DescriptionID = skill->description;
@@ -62,6 +64,7 @@ void Skill::GetContext() {
 		h0004 = skill->h0004;
 		h0032 = skill->h0032;
 		h0037 = skill->h0037;
+        
     }
 }
 
@@ -135,6 +138,7 @@ void bind_Skill(py::module_& m) {
         .def_readonly("projectile_animation2_id", &Skill::ProjectileAnimation2ID)
         .def_readonly("icon_file_id", &Skill::IconFileID)
         .def_readonly("icon_file2_id", &Skill::IconFileID2)
+		.def_readonly("icon_file_hi_res_id", &Skill::IconFileIDHiRes)
         .def_readonly("name_id", &Skill::NameID)
         .def_readonly("concise", &Skill::Concise)
         .def_readonly("description_id", &Skill::DescriptionID)

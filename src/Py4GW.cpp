@@ -137,6 +137,9 @@ bool Py4GW::Initialize() {
 void Py4GW::Terminate() {
     GW::DisableHooks();
     GW::Terminate();
+    if (Py_IsInitialized()) {
+        py::finalize_interpreter();
+    }
 }
 
 bool p_open = true;
@@ -1399,7 +1402,7 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 
         
         //Widget Manager
-        /*
+        
         if (LoadAndExecuteScriptOnce2()) {
             script_state2 = ScriptState::Running;
             script_timer2.reset(); // Reset and start the timer
@@ -1409,7 +1412,6 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
             script_state2 = ScriptState::Stopped;
             script_timer2.stop(); // Stop the timer
         }
-        */
 
         if (!autoexec_file_path.empty()) {
             strcpy(script_path, autoexec_file_path.c_str());

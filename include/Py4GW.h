@@ -27,6 +27,7 @@ public:
     void OnNormalMerchantItemsReceived(GW::Packet::StoC::WindowItems* pak);
     void OnNormalMerchantItemsStreamEnd(GW::Packet::StoC::WindowItemsEnd* pak);
     void InitializeMerchantCallbacks();
+	void StopMerchantCallbacks();
 
     void DetachTransactionListeners();
 

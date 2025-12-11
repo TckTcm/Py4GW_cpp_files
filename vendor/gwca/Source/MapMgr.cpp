@@ -213,7 +213,6 @@ namespace {
         //Logger::Instance().LogInfo("############ MapMgrModule initialization completed ############");
     }
     void EnableHooks() {
-        //return; // Temporarily disable gamethread hooks to investigate issues
         if (EnterChallengeMission_Func)
             HookBase::EnableHooks(EnterChallengeMission_Func);
         if(WorldMap_UICallback_Func)
@@ -352,7 +351,7 @@ namespace GW {
 
         Constants::MapID GetMapID() {
             auto* c = GetCharContext();
-            return c ? c->current_map_id : Constants::MapID::None;
+            return c ? c->current_map_id : Constants::MapID::Longeyes_Ledge_outpost;
         }
 
         GW::Constants::ServerRegion GetRegion() {

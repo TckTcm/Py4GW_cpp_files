@@ -93,6 +93,7 @@ public:
     int ProjectileAnimation2ID = 0;
     int IconFileID = 0;
     int IconFileID2 = 0;
+	int IconFileIDHiRes = 0;
     int NameID = 0;
     int Concise = 0;
     int DescriptionID = 0;

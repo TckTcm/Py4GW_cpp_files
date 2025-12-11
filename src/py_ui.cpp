@@ -94,6 +94,8 @@ void UIFrame::GetContext() {
 	field22_0x58 = frame->field22_0x58;
 	field23_0x5c = frame->field23_0x5c;
 	field24_0x60 = frame->field24_0x60;
+	field24a_0x64 = frame->field24a_0x64;
+	field24b_0x68 = frame->field24b_0x68;
 	field25_0x6c = frame->field25_0x6c;
 	field26_0x70 = frame->field26_0x70;
 	field27_0x74 = frame->field27_0x74;
@@ -106,6 +108,7 @@ void UIFrame::GetContext() {
 	field34_0x9c = frame->field34_0x9c;
 	field35_0xa0 = frame->field35_0xa0;
 	field36_0xa4 = frame->field36_0xa4;
+
 	field40_0xc0 = frame->field40_0xc0;
 	field41_0xc4 = frame->field41_0xc4;
 	field42_0xc8 = frame->field42_0xc8;
@@ -278,6 +281,8 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
 		.def_readwrite("field22_0x58", &UIFrame::field22_0x58)
 		.def_readwrite("field23_0x5c", &UIFrame::field23_0x5c)
 		.def_readwrite("field24_0x60", &UIFrame::field24_0x60)
+		.def_readwrite("field24a_0x64", &UIFrame::field24a_0x64)
+		.def_readwrite("field24b_0x68", &UIFrame::field24b_0x68)
 		.def_readwrite("field25_0x6c", &UIFrame::field25_0x6c)
 		.def_readwrite("field26_0x70", &UIFrame::field26_0x70)
 		.def_readwrite("field27_0x74", &UIFrame::field27_0x74)

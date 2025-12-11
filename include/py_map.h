@@ -315,6 +315,8 @@ public:
     bool SkipCinematic();
     bool EnterChallenge();
     bool CancelEnterChallenge();
+	uint32_t GetMapID();
+    
 };
 
 

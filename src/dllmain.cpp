@@ -75,6 +75,7 @@ bool DLLMain::Initialize() {
     
     
     // Attach render hook
+    
     if (!initialized) Logger::Instance().LogInfo("[DLLMain] Attempting to attach render hook...");
     if (!AttachRenderHook()) {
         Logger::Instance().LogError("[DLLMain] Failed to attach render hook");
@@ -108,25 +109,29 @@ bool DLLMain::Initialize() {
 
 void DLLMain::Terminate() {
     if (!initialized) return;
+    running = false;
+
 	GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
-    //Logger::Instance().LogInfo("Terminating DLL...");
+    Logger::Instance().LogInfo("Terminating DLL...");
     Py4GW::Instance().Terminate();
 
     // Clean up ImGui
+    
     if (imgui_initialized) {
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
         imgui_initialized = false;
     }
+    
 
     DetachWndProc();
     DetachRenderHook();
 
-    FreeLibraryAndExitThread(g_DllModule, EXIT_SUCCESS);
 
-    running = false;
     initialized = false;
+
+    FreeLibraryAndExitThread(g_DllModule, EXIT_SUCCESS);
 }
 
 void SetupImGuiFonts() {
@@ -301,6 +306,8 @@ bool DLLMain::InitializeImGui(IDirect3DDevice9* device) {
 void DLLMain::Update(GW::HookStatus*) {
     if (!running || !initialized) return;
 
+    //return;
+    
 	// Update Py4GW
 	if (!gw_client_window_handle) { gw_client_window_handle = gw_window_handle; }
 
@@ -318,21 +325,18 @@ void DLLMain::Update(GW::HookStatus*) {
 
 
     last_tick_count = tick;
+    
 
 }
 
 
 void DLLMain::Draw(IDirect3DDevice9* device) {
+
     if (!initialized) {
         Logger::Instance().LogInfo("DLL not initialized, skipping rendering.");
         return;
     }
 
-    //Logger::Instance().SetLogFile("Py4GW_injection_log.txt");
-    // Initialize ImGui on first render
-	//if (!imgui_initialized) {
-		//Logger::Instance().LogInfo("Initializing ImGui on first render...");
-	//}
     if (!imgui_initialized && !InitializeImGui(device)) {
 		Logger::Instance().LogError("Failed to initialize ImGui on first render");
         return;
@@ -370,6 +374,7 @@ void DLLMain::Draw(IDirect3DDevice9* device) {
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
 }
 
 
@@ -477,8 +482,29 @@ LRESULT CALLBACK DLLMain::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM
     auto& instance = DLLMain::Instance();
     ImGuiIO& io = ImGui::GetIO();
 
-    //io.MouseDown[0] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
-    //io.MouseDown[1] = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+    POINT pt;
+    GetCursorPos(&pt);
+    ScreenToClient(hWnd, &pt);
+    io.MousePos = ImVec2((float)pt.x, (float)pt.y);
+
+    static bool cached_left = false;
+    static bool cached_right = false;
+    static float cached_x = -1.0f;
+    static float cached_y = -1.0f;
+
+    switch (Message) {
+        case WM_LBUTTONDOWN: cached_left = true; break;
+        case WM_LBUTTONUP:   cached_left = false; break;
+
+        case WM_RBUTTONDOWN: cached_right = true; break;
+        case WM_RBUTTONUP:   cached_right = false; break;
+
+        case WM_MOUSEMOVE:
+            cached_x = (float)GET_X_LPARAM(lParam);
+            cached_y = (float)GET_Y_LPARAM(lParam);
+            break;
+        break;
+    }
 
     // Let WM_SETTEXT/WM_GETTEXT always pass through to original WndProc
     if (Message == WM_SETTEXT ||
@@ -489,77 +515,100 @@ LRESULT CALLBACK DLLMain::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM
         return DefWindowProc(hWnd, Message, wParam, lParam);
     }
 
-    if (Message == WM_RBUTTONUP) {right_mouse_down = false;}
-    if (Message == WM_RBUTTONDOWN) {right_mouse_down = true;}
-    if (Message == WM_RBUTTONDBLCLK) {right_mouse_down = true;}
+    if (Message == WM_RBUTTONUP) { 
+        right_mouse_down = false; 
+    }
+    if (Message == WM_RBUTTONDOWN) { 
+        right_mouse_down = true; 
+    }
+    if (Message == WM_RBUTTONDBLCLK) { right_mouse_down = true; }
 
-	if (right_mouse_down) {
-		return CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam);
-	}
+    if (right_mouse_down) {
+		io.MouseDown[0] = cached_left;
+        io.MouseDown[1] = cached_right;
+        if (cached_x >= 0.0f && cached_y >= 0.0f)
+            io.MousePos = ImVec2(cached_x, cached_y);
+        return CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam);
+    }
 
     //POINT mouse_pos;
     //GetCursorPos(&mouse_pos);
     //ScreenToClient(hWnd, &mouse_pos);
     //io.MousePos = ImVec2((float)mouse_pos.x, (float)mouse_pos.y);
 
-	if (Message == WM_LBUTTONDOWN && !dragging_initialized) {
-		if (io.WantCaptureMouse) {
+    if (Message == WM_LBUTTONDOWN && !dragging_initialized) {
+        if (io.WantCaptureMouse) {
             is_dragging = true;
-			is_dragging_imgui = true;
-		}
-		else {
-			is_dragging = true;
-			is_dragging_imgui = false;
+            is_dragging_imgui = true;
+        }
+        else {
+            is_dragging = true;
+            is_dragging_imgui = false;
 
-            const auto result =  CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam);
-			return result;
-		}
-	}
+            const auto result = CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam);
+            return result;
+        }
+		if (is_dragging) cached_left = true;
+		else cached_left = false;
+    }
 
 
-	if (Message == WM_LBUTTONUP) {
-		is_dragging = false;
-		is_dragging_imgui = false;
-		dragging_initialized = false;
-	}
+    if (Message == WM_LBUTTONUP) {
+		cached_left = false;
+        is_dragging = false;
+        is_dragging_imgui = false;
+        dragging_initialized = false;
+    }
 
-	if (is_dragging) {
-		dragging_initialized = true;
-		if (is_dragging_imgui) {
-			ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam);
+    if (is_dragging) {
+		cached_left = true;
+        dragging_initialized = true;
+        if (is_dragging_imgui) {
+            ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam);
+            io.MouseDown[0] = cached_left;
+            io.MouseDown[1] = cached_right;
+            if (cached_x >= 0.0f && cached_y >= 0.0f)
+                io.MousePos = ImVec2(cached_x, cached_y);
             return TRUE;
-		}
-		else { return CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam); }
-	}
+        }
+        else { 
+            io.MouseDown[0] = cached_left;
+            io.MouseDown[1] = cached_right;
+            if (cached_x >= 0.0f && cached_y >= 0.0f)
+                io.MousePos = ImVec2(cached_x, cached_y);
+            return CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam); 
+        }
+    }
 
     ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam);
 
 
     io = ImGui::GetIO();
 
-	if (io.WantCaptureMouse && 
-		(Message == WM_MOUSEMOVE || 
-         Message == WM_LBUTTONDOWN || 
-	     Message == WM_LBUTTONDBLCLK ||
-         Message == WM_RBUTTONDBLCLK ||
-	     Message == WM_RBUTTONDOWN ||
-	     Message == WM_RBUTTONUP ||
-         Message == WM_LBUTTONUP || 
-         Message == WM_MOUSEWHEEL || 
-         Message == WM_MOUSEHWHEEL)) {
-            return TRUE;
+    io.MouseDown[0] = cached_left;
+    io.MouseDown[1] = cached_right;
+    if (cached_x >= 0.0f && cached_y >= 0.0f)
+        io.MousePos = ImVec2(cached_x, cached_y);
+
+    if (io.WantCaptureMouse &&
+        (Message == WM_MOUSEMOVE ||
+            Message == WM_LBUTTONDOWN ||
+            Message == WM_LBUTTONDBLCLK ||
+            Message == WM_RBUTTONDBLCLK ||
+            Message == WM_RBUTTONDOWN ||
+            Message == WM_RBUTTONUP ||
+            Message == WM_LBUTTONUP ||
+            Message == WM_MOUSEWHEEL ||
+            Message == WM_MOUSEHWHEEL)) {
+        return TRUE;
     }
 
-	if (io.WantCaptureKeyboard && io.WantTextInput && (Message == WM_KEYDOWN || Message == WM_KEYUP || Message == WM_CHAR)) {
-		return TRUE;
-	}
+    if (io.WantCaptureKeyboard && io.WantTextInput && (Message == WM_KEYDOWN || Message == WM_KEYUP || Message == WM_CHAR)) {
+        return TRUE;
+    }
 
     return CallWindowProc(instance.old_wndproc, hWnd, Message, wParam, lParam);
 }
-
-
-
-
 
 
 DWORD WINAPI MainLoop(LPVOID) {

@@ -85,8 +85,8 @@ void Overlay::GetScreenToWorld() {
 
         GlobalMouseClass setmousepos;
         GW::Vec2f* screen_coord = 0;
-        //uintptr_t address = GW::Scanner::Find("\x8B\xE5\x5D\xC3\x8B\x4F\x10\x83\xC7\x08", "xxxxxxxxxx", 0xC);
-        uintptr_t address = GW::Scanner::Find("\x83\x3d\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x8b\x4f\x10", "xx????xx?????xxx", 0x15);
+        //uintptr_t address = GW::Scanner::Find("\x83\x3d\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x8b\x4f\x10", "xx????xx?????xxx", 0x15);
+        uintptr_t address = GW::Scanner::Find("\x8b\x4f\x10\x83\xc7\x08\xd9", "xxxxxxx", 0x8);
 		Logger::AssertAddress("ptrNdcScreenCoords", (uintptr_t)address);
         if (Verify(address))
         {
@@ -94,7 +94,6 @@ void Overlay::GetScreenToWorld() {
         }
         else { setmousepos.SetMouseWorldPos(0, 0, 0); return; }
 
-        //address = GW::Scanner::Find("\xD9\x5D\x14\xD9\x45\x14\x83\xEC\x0C", "xxxxxxxx", -0x2F);
         address = GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xD9\x5D\x14\xD9\x45\x14\x83\xEC\x0C", "xxxxxxxx", 0));
 		Logger::AssertAddress("ScreenToWorldPoint_Func", (uintptr_t)address);
         if (address)
@@ -103,7 +102,6 @@ void Overlay::GetScreenToWorld() {
         }
         else { setmousepos.SetMouseWorldPos(0, 0, 0); return; }
 
-        //address = GW::Scanner::Find("\xff\x75\x08\xd9\x5d\xfc\xff\x77\x7c", "xxxxxxxxx", -0x27);
         address = GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xff\x75\x08\xd9\x5d\xfc\xff\x77\x7c", "xxxxxxx", 0));
 		Logger::AssertAddress("MapIntersect_Func", (uintptr_t)address);
         if (address) {

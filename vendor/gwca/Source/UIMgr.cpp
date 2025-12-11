@@ -892,9 +892,10 @@ namespace GW {
                 uint32_t wparam;
                 uint32_t lparam;
             };
-            button_param wparam = { 0, btn_frame->field100_0x1b0,0 };
+            //button_param wparam = { 0, btn_frame->field100_0x1b0,0 };
+			button_param wparam = { 0, btn_frame->field105_0x1c4,0 };
             action.wparam = &wparam;
-            action.current_state = 0x6;
+            action.current_state = GW::UI::UIPacket::ActionState::MouseUp;
 
             return SendFrameUIMessage(parent_frame, GW::UI::UIMessage::kMouseClick2, &action);
         }

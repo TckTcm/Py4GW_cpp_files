@@ -111,7 +111,7 @@ namespace {
 			Logger::Instance().LogError("Could not find SetDifficulty_Func call", "Party Module");
 		}
         */
-        address = Scanner::Find("\x89\x46\x20\xF7", "xxxx", 0xBB); // NB: UI Message 0x10000128 lands within hard mode button ui callback
+        address = Scanner::Find("\x83\x3B\x00\x0F\x85\x00\x00\x00\x00\xFF\x70\x20","xxxxx????xxx", 0x0C); // NB: UI Message 0x10000128 lands within hard mode button ui callback
         if (address)
             SetDifficulty_Func = (DoAction_pt)Scanner::FunctionFromNearCall(address);
 
@@ -418,7 +418,7 @@ namespace GW {
                 return false;
 
             uint32_t wparam[4] = { 0 };
-            wparam[2] = 0x6;
+            wparam[2] = 0x7;
             wparam[1] = 0x6;
 
             uint32_t ctx[13] = { 0 };
@@ -436,7 +436,7 @@ namespace GW {
                 return false;
 
             uint32_t wparam[4] = { 0 };
-            wparam[2] = 0x6;
+            wparam[2] = 0x7;
             wparam[1] = 0x2;
 
             uint32_t ctx[13] = { 0 };
@@ -452,7 +452,7 @@ namespace GW {
                 return false;
 
             uint32_t wparam[4] = { 0 };
-            wparam[2] = 0x6;
+            wparam[2] = 0x7;
             wparam[1] = 0x6;
 
             uint32_t ctx[13] = { 0 };

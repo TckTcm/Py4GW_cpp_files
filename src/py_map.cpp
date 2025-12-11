@@ -994,6 +994,10 @@ bool PyMap::LeaveGH() {
 	return GW::GuildMgr::LeaveGH();
 }
 
+uint32_t PyMap::GetMapID() {
+	return static_cast<uint32_t>(GW::Map::GetMapID());
+}
+
 
 GW::Constants::ServerRegion PyMap::RegionFromDistrict(GW::Constants::District _district) {
     return GW::Map::RegionFromDistrict(_district);
@@ -1279,7 +1283,8 @@ PYBIND11_EMBEDDED_MODULE(PyMap, m) {
         .def("GetIsMapUnlocked", &PyMap::GetIsMapUnlocked)
         .def("SkipCinematic", &PyMap::SkipCinematic)
         .def("EnterChallenge", &PyMap::EnterChallenge)
-        .def("CancelEnterChallenge", &PyMap::CancelEnterChallenge);
+        .def("CancelEnterChallenge", &PyMap::CancelEnterChallenge)
+		.def("GetMapID", &PyMap::GetMapID);
 
 }
 
