@@ -64,11 +64,33 @@ namespace {
     };
     std::vector<CreateUIComponentCallbackEntry> OnCreateUIComponent_callbacks;
 
+    GWCA_API std::vector<std::tuple<uint64_t, uint32_t, std::string>> frame_logs;
+    static const size_t MAX_LOGS = 200;
+
+    void LogFrameLabel(uint32_t frame_id, const wchar_t* label_w)
+    {
+        if (!label_w || !label_w[0])
+            return;
+
+        // Convert wstring - utf8 std::string
+        char buffer[512];
+        WideCharToMultiByte(CP_UTF8, 0, label_w, -1, buffer, sizeof(buffer), NULL, NULL);
+
+        uint64_t timestamp = GetTickCount64();
+
+        frame_logs.emplace_back(timestamp, frame_id, std::string(buffer));
+
+        // Optional circular cap
+        if (frame_logs.size() > MAX_LOGS)
+            frame_logs.erase(frame_logs.begin()); // remove oldest
+    }
+
+
 
     uint32_t __cdecl OnCreateUIComponent(uint32_t frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, wchar_t* name_enc, wchar_t* component_label) {
         GW::Hook::EnterHook();
         UI::CreateUIComponentPacket packet = {frame_id,component_flags, tab_index, event_callback, name_enc, component_label};
-
+        
         HookStatus status;
         size_t i = 0;
         // Pre callbacks
@@ -89,6 +111,7 @@ namespace {
             ++status.altitude;
         }
         GW::Hook::LeaveHook();
+        LogFrameLabel(frame_id, component_label);
         return out;
     }
 
@@ -227,6 +250,8 @@ namespace {
     typedef GW::UI::Frame* (__cdecl* GetRootFrame_pt)();
     GetRootFrame_pt GetRootFrame_Func = 0;
 
+    typedef void(__cdecl* FrameCreate_pt)(uint32_t parent, uint32_t offset, wchar_t* label);
+    FrameCreate_pt FrameCreate_Original = nullptr;
 
     UI::WindowPosition* window_positions_array = 0;
 
@@ -507,6 +532,8 @@ namespace {
             GetGameRendererMode_Func = (GetGameRendererMode_pt)GW::Scanner::FunctionFromNearCall(address - 0x1d);
             GetGameRendererMetric_Func = (GetGameRendererMetric_pt)GW::Scanner::FunctionFromNearCall(address - 0x5);
         }
+
+
 
 
         GWCA_INFO("[SCAN] WorldMapState_Addr = %p", WorldMapState_Addr);
@@ -944,7 +971,9 @@ namespace GW {
             return SendFrameUIMessage(parent_frame, UIMessage::kMouseClick, &action);
         }
 
-
+        std::vector<std::tuple<uint64_t, uint32_t, std::string>> GetFrameLogs() {
+			return frame_logs;
+        }
 
         Frame* FrameRelation::GetFrame() {
             const auto frame = (Frame*)((uintptr_t)this - offsetof(struct Frame, relation));

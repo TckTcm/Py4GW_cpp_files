@@ -346,6 +346,7 @@ PYBIND11_EMBEDDED_MODULE(PyUIManager, m) {
 
 
 	py::class_<UIManager>(m, "UIManager")
+		.def_static("get_frame_logs", &UIManager::GetFrameLogs, "Retrieves the logs related to UI frames.")
 		.def_static("get_frame_id_by_label", &UIManager::GetFrameIDByLabel, py::arg("label"), "Gets the frame ID associated with a given label.")
 		.def_static("get_frame_id_by_hash", &UIManager::GetFrameIDByHash, py::arg("hash"), "Gets the frame ID using its hash.")
 		.def_static("get_hash_by_label", &UIManager::GetHashByLabel, py::arg("label"), "Gets the hash of a frame label.")

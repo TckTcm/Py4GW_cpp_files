@@ -1605,6 +1605,10 @@ namespace GW {
             wchar_t* component_label;
         };
 
+        
+
+		GWCA_API std::vector<std::tuple<uint64_t, uint32_t, std::string>> GetFrameLogs();
+
         GWCA_API GW::Constants::Language GetTextLanguage();
 
         GWCA_API bool ButtonClick(Frame* btn_frame);

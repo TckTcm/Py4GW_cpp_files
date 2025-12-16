@@ -164,7 +164,9 @@ public:
 
 class UIManager {
 public:
-
+	static std::vector<std::tuple<uint64_t, uint32_t, std::string>> GetFrameLogs() {
+		return GW::UI::GetFrameLogs();
+	}
 
     static uint32_t GetFrameIDByLabel(const std::string& label) {
         std::wstring wlabel(label.begin(), label.end()); // Convert to wide string

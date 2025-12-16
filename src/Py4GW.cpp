@@ -2031,8 +2031,111 @@ void ShowWindowAgain() {
     ShowWindow(hwnd, SW_SHOW);
 }
 
+class PyScanner {
+public:
+    // --- Initialize ---
+    static void Initialize(const std::string& module_name = "") {
+        if (module_name.empty())
+            GW::Scanner::Initialize((const char*)nullptr);
+        else
+            GW::Scanner::Initialize(module_name.c_str());
+    }
+
+    // --- Find ---
+    static uintptr_t Find(py::bytes pattern, const std::string& mask,
+        int offset, uint8_t section) {
+        std::string pat = pattern;
+        return GW::Scanner::Find(pat.c_str(), mask.c_str(), offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindInRange ---
+    static uintptr_t FindInRange(py::bytes pattern, const std::string& mask,
+        int offset, uintptr_t start, uintptr_t end) {
+        std::string pat = pattern;
+        return GW::Scanner::FindInRange(pat.c_str(), mask.c_str(), offset,
+            (DWORD)start, (DWORD)end);
+    }
+
+    // --- FunctionFromNearCall ---
+    static uintptr_t FunctionFromNearCall(uintptr_t call_addr,
+        bool check_valid_ptr = true) {
+        return GW::Scanner::FunctionFromNearCall(call_addr, check_valid_ptr);
+    }
+
+    // --- IsValidPtr ---
+    static bool IsValidPtr(uintptr_t addr, uint8_t section) {
+        return GW::Scanner::IsValidPtr(addr, (GW::ScannerSection)section);
+    }
+
+    // --- ToFunctionStart ---
+    static uintptr_t ToFunctionStart(uintptr_t addr,
+        uint32_t scan_range = 0xFF) {
+        return GW::Scanner::ToFunctionStart(addr, scan_range);
+    }
+
+    // --- FindNthUseOfAddress ---
+    static uintptr_t FindNthUseOfAddress(uintptr_t address, size_t nth,
+        int offset, uint8_t section) {
+        return GW::Scanner::FindNthUseOfAddress(address, nth, offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindUseOfAddress ---
+    static uintptr_t FindUseOfAddress(uintptr_t address, int offset,
+        uint8_t section) {
+        return GW::Scanner::FindUseOfAddress(address, offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindUseOfString (ANSI) ---
+    static uintptr_t FindUseOfStringA(const std::string& str, int offset,
+        uint8_t section) {
+        return GW::Scanner::FindUseOfString(str.c_str(), offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindUseOfString (WCHAR) ---
+    static uintptr_t FindUseOfStringW(const std::wstring& str, int offset,
+        uint8_t section) {
+        return GW::Scanner::FindUseOfString(str.c_str(), offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindNthUseOfString (ANSI) ---
+    static uintptr_t FindNthUseOfStringA(const std::string& str, size_t nth,
+        int offset, uint8_t section) {
+        return GW::Scanner::FindNthUseOfString(str.c_str(), nth, offset,
+            (GW::ScannerSection)section);
+    }
+
+    // --- FindNthUseOfString (WCHAR) ---
+    static uintptr_t FindNthUseOfStringW(const std::wstring& str, size_t nth,
+        int offset, uint8_t section) {
+        return GW::Scanner::FindNthUseOfString(str.c_str(), nth, offset,
+            (GW::ScannerSection)section);
+    }
+};
 
 
+void EnqueuePythonCallback(py::function func) {
+    // move func into the lambda so it stays alive
+    GW::GameThread::Enqueue([func = std::move(func)]() mutable {
+        // We're now running on the GW game thread here
+        py::gil_scoped_acquire gil;
+        try {
+            func();  // Call the Python function with no args
+        }
+        catch (const py::error_already_set& e) {
+            // TODO: log this somewhere sane
+            // Logger::Instance().LogError(e.what(), "PyGameThread");
+        }
+        });
+}
+
+static uint64_t Get_Tick_Count64() {
+	return GetTickCount64();
+}
 
 
 PYBIND11_EMBEDDED_MODULE(Py4GW, m)
@@ -2059,6 +2162,18 @@ PYBIND11_EMBEDDED_MODULE(Py4GW, m)
     py::module_ console = m.def_submodule("Console", "Submodule for console logging");
 
 	py::module_ game = m.def_submodule("Game", "Submodule for game functions");
+
+    game.def(
+        "enqueue",
+        &EnqueuePythonCallback,
+        "Enqueue a Python callback to run on the GW game thread"
+    );
+
+	game.def(
+		"get_tick_count64",
+		&Get_Tick_Count64,
+		"Get the current tick count as a 64-bit integer"
+	);
 
     // Bind the MessageType enum inside the 'Console' submodule
     py::enum_<MessageType>(console, "MessageType")
@@ -2156,7 +2271,36 @@ PYBIND11_EMBEDDED_MODULE(Py4GW, m)
         .def("GetMaxPing", &PingTracker::GetMaxPing);
 }
 
+// pybind11 scanner module binding
+PYBIND11_EMBEDDED_MODULE(PyScanner, m)
+{
+    py::class_<PyScanner>(m, "PyScanner")
+        // Init
+        .def_static("Initialize", &PyScanner::Initialize,
+            py::arg("module_name") = "")
 
+        // Pattern scanning
+        .def_static("Find", &PyScanner::Find)
+        .def_static("FindInRange", &PyScanner::FindInRange)
+
+        // Function resolution
+        .def_static("FunctionFromNearCall", &PyScanner::FunctionFromNearCall)
+        .def_static("ToFunctionStart", &PyScanner::ToFunctionStart)
+
+        // Pointer validation
+        .def_static("IsValidPtr", &PyScanner::IsValidPtr)
+
+        // Address usage scanning
+        .def_static("FindUseOfAddress", &PyScanner::FindUseOfAddress)
+        .def_static("FindNthUseOfAddress", &PyScanner::FindNthUseOfAddress)
+
+        // String usage scanning
+        .def_static("FindUseOfStringA", &PyScanner::FindUseOfStringA)
+        .def_static("FindUseOfStringW", &PyScanner::FindUseOfStringW)
+        .def_static("FindNthUseOfStringA", &PyScanner::FindNthUseOfStringA)
+        .def_static("FindNthUseOfStringW", &PyScanner::FindNthUseOfStringW);
+
+}
 
 // pybind11 module binding
 PYBIND11_EMBEDDED_MODULE(PyKeystroke, m)
