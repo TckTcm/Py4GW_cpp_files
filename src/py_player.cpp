@@ -627,14 +627,23 @@ struct AvailableCharacterInfo {
 
 };
 
+struct PyPregameLoginCharacter {
+	uint32_t unk0;
+	uint32_t pvp_or_campaign;
+	uint32_t UnkPvPData01;
+	uint32_t UnkPvPData02;
+	uint32_t UnkPvPData03;
+	uint32_t UnkPvPData04;
+	uint32_t Level;
+	uint32_t current_map_id;
+	std::string character_name;
+};
+
 struct PyPreGameContext {
     uint32_t frame_id =0;
     uint32_t chosen_character_index =0;
-    uint32_t index_1 =0;
-    uint32_t index_2 =0;
-    std::vector<std::string> chars;
-	std::vector<uint32_t> h0004;
-	std::vector<uint32_t> h0128;
+    std::vector<PyPregameLoginCharacter> chars;
+
 };
 
 PyPreGameContext GetPreGameContext() {
@@ -644,16 +653,22 @@ PyPreGameContext GetPreGameContext() {
 	if (!pregame) return pgc;
 	pgc.frame_id = pregame->frame_id;
 	pgc.chosen_character_index = pregame->chosen_character_index;
-    pgc.index_1 = 0; // pregame->index_1;
-    pgc.index_2 = 0; // pregame->index_2;
-	for (int i = 0; i < 72; ++i) {pgc.h0004.push_back(pregame->h0004[i]);}
-	//for (int i = 0; i < 6; ++i) { pgc.h0128.push_back(pregame->h0128[i]); }
 	
     for (size_t i = 0; i < pregame->chars.size(); ++i) {
         const auto& login_char = pregame->chars[i];
         std::wstring wname(login_char.character_name);
         std::string char_name(wname.begin(), wname.end());  // Simple conversion
-        pgc.chars.push_back(char_name);
+		pgc.chars.push_back(PyPregameLoginCharacter{
+			login_char.unk0,
+			login_char.pvp_or_campaign,
+			login_char.UnkPvPData01,
+			login_char.UnkPvPData02,
+			login_char.UnkPvPData03,
+			login_char.UnkPvPData04,
+			login_char.Level,
+			login_char.current_map_id,
+			char_name
+			});
     }
     
 	return pgc;
@@ -750,15 +765,23 @@ void BindAvailableCharacterInfo(py::module_& m) {
 }
 
 void BindPreGameContext(py::module_& m) {
+	py::class_<PyPregameLoginCharacter>(m, "PyPregameLoginCharacter")
+		.def(py::init<>())  // Constructor
+		.def_readonly("unk0", &PyPregameLoginCharacter::unk0)
+		.def_readonly("pvp_or_campaign", &PyPregameLoginCharacter::pvp_or_campaign)
+		.def_readonly("UnkPvPData01", &PyPregameLoginCharacter::UnkPvPData01)
+		.def_readonly("UnkPvPData02", &PyPregameLoginCharacter::UnkPvPData02)
+		.def_readonly("UnkPvPData03", &PyPregameLoginCharacter::UnkPvPData03)
+		.def_readonly("UnkPvPData04", &PyPregameLoginCharacter::UnkPvPData04)
+		.def_readonly("Level", &PyPregameLoginCharacter::Level)
+		.def_readonly("current_map_id", &PyPregameLoginCharacter::current_map_id)
+		.def_readonly("character_name", &PyPregameLoginCharacter::character_name);
+
 	py::class_<PyPreGameContext>(m, "PyPreGameContext")
 		.def(py::init<>())  // Constructor
 		.def_readonly("frame_id", &PyPreGameContext::frame_id)
 		.def_readonly("chosen_character_index", &PyPreGameContext::chosen_character_index)
-		.def_readonly("index_1", &PyPreGameContext::index_1)
-		.def_readonly("index_2", &PyPreGameContext::index_2)
-		.def_readonly("chars", &PyPreGameContext::chars)
-		.def_readonly("h0004", &PyPreGameContext::h0004)
-		.def_readonly("h0128", &PyPreGameContext::h0128);
+		.def_readonly("chars", &PyPreGameContext::chars);
 }
 
 void BindPyPlayer(py::module_& m) {
