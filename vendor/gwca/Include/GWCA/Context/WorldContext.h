@@ -227,6 +227,7 @@ namespace GW {
         /* +h052C */ QuestLog quest_log;
         /* +h053C */ uint32_t h053C[10];
         /* +h0564 */ Array<MissionObjective> mission_objectives;
+
         /* +h0574 */ Array<uint32_t> henchmen_agent_ids;
         /* +h0584 */ HeroFlagArray hero_flags;
         /* +h0594 */ HeroInfoArray hero_info;

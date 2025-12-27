@@ -1043,6 +1043,11 @@ uintptr_t PyMap::GetAreaInfoPtr()
 	return reinterpret_cast<uintptr_t>(GW::Map::GetMapInfo(map_id.Get()));
 }
 
+uintptr_t PyMap::GetMapContextPtr()
+{
+	return reinterpret_cast<uintptr_t>(GW::GetMapContext());
+}
+
 
 void bind_InstanceType(py::module_& m) {
     py::enum_<GW::Constants::InstanceType>(m, "InstanceType")
@@ -1304,9 +1309,13 @@ PYBIND11_EMBEDDED_MODULE(PyMap, m) {
         .def("EnterChallenge", &PyMap::EnterChallenge)
         .def("CancelEnterChallenge", &PyMap::CancelEnterChallenge)
 		.def("GetMapID", &PyMap::GetMapID)
+
 		.def("GetMissionMapContextPtr", &PyMap::GetMissionMapContextPtr)
 		.def("GetWorldMapContextPtr", &PyMap::GetWorldMapContextPtr)
-		.def("GetGameplayContextPtr", &PyMap::GetGameplayContextPtr);
+		.def("GetGameplayContextPtr", &PyMap::GetGameplayContextPtr)
+		.def("GetMapContextPtr", &PyMap::GetMapContextPtr)
+        ;
+
 
 }
 

@@ -292,62 +292,21 @@ namespace GW {
 
         enum class UIMessage : uint32_t {
             kNone                       = 0x0,
-            kFrameMessage_0x1,
-            kFrameMessage_0x2,
-            kFrameMessage_0x3,
-            kFrameMessage_0x4,
-            kFrameMessage_0x5,
-            kFrameMessage_0x6,
-            kFrameMessage_0x7,
             kResize                     = 0x8,
             kInitFrame                  = 0x9,
-            kFrameMessage_0xa,
             kDestroyFrame               = 0xb,
-            kFrameMessage_0xc,
-            kFrameMessage_0xd,
-            kFrameMessage_0xe,
-            kFrameMessage_0xf,
-            kFrameMessage_0x10,
-            kFrameMessage_0x11,
-            kFrameMessage_0x12,
-            kFrameMessage_0x13          = 0x13,
-            kFrameMessage_0x14,
-            kFrameMessage_0x15,
-            kFrameMessage_0x16,
-            kFrameMessage_0x17,
-            kFrameMessage_0x18,
-            kFrameMessage_0x19,
-            kFrameMessage_0x1a,
-            kFrameMessage_0x1b,
-            kFrameMessage_0x1c,
-            kFrameMessage_0x1d,
-			kFrameMessage_0x1e,
             kKeyDown                    = 0x20, // wparam = UIPacket::kKeyAction* - Updated from 0x1e to 0x20
-            kSetFocus,                  //0x1f, // wparam = 1 or 0
-            kKeyUp,                     // 0x20, // wparam = UIPacket::kKeyAction*
-            kFrameMessage_0x21,             // 0x21
-            kMouseClick,                 // 0x22, // wparam = UIPacket::kMouseClick*
-            kFrameMessage_0x23,             // 0x23
-            kMouseCoordsClick ,          // 0x24,  // wparam = UIPacket::kMouseCoordsClick*
-            kFrameMessage_0x25,             // 0x25
-            kMouseUp,                    // 0x26, // wparam = UIPacket::kMouseAction*
-            kFrameMessage_0x27,             // 0x27
-            kFrameMessage_0x28,             // 0x28
-            kFrameMessage_0x29,             // 0x29
-            kFrameMessage_0x2a,             // 0x2a
-            kFrameMessage_0x2b,             // 0x2b
-            kToggleButtonDown,             // 0x2c
-            kFrameMessage_0x2d,             // 0x2d
-            kMouseClick2 = 0x31,                   // 0x2e, wparam = UIPacket::kMouseAction*
-            kMouseAction,               // 0x2f, // wparam = UIPacket::kMouseAction*
-            kRenderFrame_0x30,              // 0x30
-            kRenderFrame_0x35 = 0x35,              // 0x31
-            kRenderFrame_0x36,              // 0x32
-            kSetLayout,                 //= 0x33,
-            kMeasureContent,            // = 0x34,
-            kFrameMessage_0x39,             // 0x35
-            kFrameMessage_0x3A,             // 0x36
-            kRefreshContent,            // = 0x37,
+            kSetFocus                   = 0x21, // wparam = 1 or 0
+            kKeyUp                      = 0x22, // wparam = UIPacket::kKeyAction*
+            kMouseClick                 = 0x24, // wparam = UIPacket::kMouseClick*
+            kMouseCoordsClick           = 0x26, // wparam = UIPacket::kMouseCoordsClick*
+            kMouseUp                    = 0x28, // wparam = UIPacket::kMouseAction*
+            kToggleButtonDown           = 0x2E,
+            kMouseClick2                = 0x31, // wparam = UIPacket::kMouseAction*
+            kMouseAction                = 0x32, // wparam = UIPacket::kMouseAction*
+            kSetLayout                  = 0x37,
+            kMeasureContent             = 0x38,
+            kRefreshContent             = 0x3B,
 
 
             // High bit messages start at 0x10000000
@@ -410,6 +369,7 @@ namespace GW {
             kShowHint = 0x100000E1,                      // 0x100000E1, wparam = { uint32_t icon_type, wchar_t* message_enc }
             kWeaponSetSwapComplete = 0x100000E9,         // 0x100000E9, wparam = UIPacket::kWeaponSwap*
             kWeaponSetSwapCancel = 0x100000EA,           // 0x100000EA
+
             kWeaponSetUpdated = 0x100000EB,              // 0x100000EB
             kUpdateGoldCharacter = 0x100000EC,           // 0x100000EC, wparam = { uint32_t unk, uint32_t gold_character }
             kUpdateGoldStorage = 0x100000ED,             // 0x100000ED, wparam = { uint32_t unk, uint32_t gold_storage }
@@ -438,13 +398,12 @@ namespace GW {
             kPartySearchInviteReceived = 0x10000137,     // 0x10000137, wparam = UIPacket::kPartySearchInviteReceived*
             kPartySearchInviteSent = 0x10000139,         // 0x10000139
             kPartyShowConfirmDialog = 0x1000013A,        // 0x1000013A, wparam = UIPacket::kPartyShowConfirmDialog
-
             kPreferenceEnumChanged = 0x10000140,         // 0x10000140, wparam = UiPacket::kPreferenceEnumChanged
             kPreferenceFlagChanged = 0x10000141,         // 0x10000141, wparam = UiPacket::kPreferenceFlagChanged
             kPreferenceValueChanged = 0x10000142,        // 0x10000142, wparam = UiPacket::kPreferenceValueChanged
-
             kUIPositionChanged = 0x10000143,             // 0x10000143, wparam = UIPacket::kUIPositionChanged
             kPreBuildLoginScene = 0x10000144,            // 0x10000144, Called with no args right before login scene is drawn
+
             kQuestAdded = 0x1000014E,                    // 0x1000014E, wparam = { quest_id, ... }
             kQuestDetailsChanged = 0x1000014F,           // 0x1000014F, wparam = { quest_id, ... }
             kQuestRemoved = 0x10000150,                  // 0x10000150, wparam = { quest_id, ... }
@@ -1268,6 +1227,19 @@ namespace GW {
         
 
 		GWCA_API std::vector<std::tuple<uint64_t, uint32_t, std::string>> GetFrameLogs();
+		GWCA_API void ClearFrameLogs();
+
+        GWCA_API std::vector<std::tuple<
+            uint64_t,               // tick
+            uint32_t,               // msgid
+            bool,                   // incoming
+            bool,                   // is_frame_message
+            uint32_t,               // frame_id
+            std::vector<uint8_t>,   // w_bytes
+            std::vector<uint8_t>    // l_bytes
+            >> GetUIPayloads();
+
+        GWCA_API void ClearUIPayloads();
 
         GWCA_API GW::Constants::Language GetTextLanguage();
 

@@ -320,6 +320,7 @@ public:
     uintptr_t GetWorldMapContextPtr();
     uintptr_t GetGameplayContextPtr();
 	uintptr_t GetAreaInfoPtr();
+	uintptr_t GetMapContextPtr();
 };
 
 

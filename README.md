@@ -5,7 +5,7 @@ This directory contains the C++ source code for `Py4GW.dll`, which provides Pyth
 ## Prerequisites
 
 - **Visual Studio 2022** (with C++ desktop development workload)
-- **Python 3.13 32-bit** (GWCA requires 32-bit)
+- **Python 3.13.0 32-bit** (GWCA requires 32-bit)
   - Install from: https://www.python.org/downloads/
   - Use the Windows installer and select "32-bit" version
   - Verify with: `py -3.13-32 --version`
@@ -50,10 +50,10 @@ cmake -G "Visual Studio 17 2022" -A Win32 `
 ### 3. Build
 
 ```powershell
-# Build in Release mode
-cmake --build . --config Release
+# Build in RelWithDebInfo mode
+cmake --build . --config RelWithDebInfo
 
-# The DLL will be output to: bin/Release/Py4GW.dll
+# The DLL will be output to: bin/RelWithDebInfo/Py4GW.dll
 ```
 
 ### 4. Deploy

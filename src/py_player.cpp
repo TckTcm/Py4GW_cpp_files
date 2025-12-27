@@ -646,6 +646,8 @@ struct PyPreGameContext {
 
 };
 
+
+
 PyPreGameContext GetPreGameContext() {
 	PyPreGameContext pgc;
     
@@ -728,6 +730,28 @@ bool PyPlayer::IsAgentIDValid(int agent_id) {
 	return true;
 }
 
+
+uintptr_t PyPlayer::GetWorldContextPtr() {
+	return reinterpret_cast<uintptr_t>(GW::GetWorldContext());
+}
+
+uintptr_t PyPlayer::GetCharContextPtr() {
+	return reinterpret_cast<uintptr_t>(GW::GetCharContext());
+}
+
+uintptr_t PyPlayer::GetAgentContextPtr() {
+	return reinterpret_cast<uintptr_t>(GW::GetAgentContext());
+}
+
+uintptr_t PyPlayer::GetCinematicPtr() {
+	auto* game_context = GW::GetGameContext();
+	return reinterpret_cast<uintptr_t>(game_context->cinematic);
+}
+
+uintptr_t PyPlayer::GetGuildContextPtr() {
+	auto* game_context = GW::GetGameContext();
+	return reinterpret_cast<uintptr_t>(game_context->guild);
+}
 
 
 void BindPyTitle(py::module_& m) {
@@ -867,8 +891,14 @@ void BindPyPlayer(py::module_& m) {
         .def_static("GetIsCharacterSelectReady", &GetIsCharacterSelectReady) // Bind the GetIsCharacterSelectReady method
         .def_static("GetAvailableCharacters", &GetAvailableCharacters) // Bind the GetAvailableCharacters method
         .def_static("GetPreGameContext", &GetPreGameContext) // Bind the GetPreGameContext method
-		.def("GetGameContextPtr", &PyPlayer::GetGameContextPtr) // Bind the GetGameContextPtr method
+		
+        .def("GetGameContextPtr", &PyPlayer::GetGameContextPtr) // Bind the GetGameContextPtr method
 		.def("GetPreGameContextPtr", &PyPlayer::GetPreGameContextPtr) // Bind the GetPreGameContextPtr method
+		.def("GetWorldContextPtr", &PyPlayer::GetWorldContextPtr) // Bind the GetWorldContextPtr method
+		.def("GetCharContextPtr", &PyPlayer::GetCharContextPtr) // Bind the GetCharContextPtr method
+		.def("GetAgentContextPtr", &PyPlayer::GetAgentContextPtr) // Bind the GetAgentContextPtr method
+		.def("GetCinematicPtr", &PyPlayer::GetCinematicPtr) // Bind the GetCinematicPtr method
+		.def("GetGuildContextPtr", &PyPlayer::GetGuildContextPtr) // Bind the GetGuildContextPtr method
 		;
         
 }

@@ -168,6 +168,27 @@ public:
 		return GW::UI::GetFrameLogs();
 	}
 
+	static void ClearFrameLogs() {
+		GW::UI::ClearFrameLogs();
+	}
+
+	static std::vector<std::tuple<
+        uint64_t,               // tick
+        uint32_t,               // msgid
+        bool,                   // incoming
+        bool,                   // is_frame_message
+        uint32_t,               // frame_id
+        std::vector<uint8_t>,   // w_bytes
+        std::vector<uint8_t>    // l_bytes
+        >> GetUIPayloads() {
+		return GW::UI::GetUIPayloads();
+	}
+
+	static void ClearUIPayloads() {
+		GW::UI::ClearUIPayloads();
+	}
+	
+
     static uint32_t GetFrameIDByLabel(const std::string& label) {
         std::wstring wlabel(label.begin(), label.end()); // Convert to wide string
         return GW::UI::GetFrameIDByLabel(wlabel.c_str());

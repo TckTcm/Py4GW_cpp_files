@@ -42,7 +42,7 @@ namespace GW {
         /* +h01A0 */ uint8_t host[0x18];
         /* +h01B8 */ uint32_t token2; // player id
         /* +h01BC */ uint32_t h01BC[25];
-        /* +h0220 */ uint32_t district_number;
+        /* +h0220 */ int32_t district_number;
         /* +h0224 */ GW::Constants::Language language;
         /* +h0228 */ GW::Constants::MapID observe_map_id;
         /* +h022C */ GW::Constants::MapID current_map_id;

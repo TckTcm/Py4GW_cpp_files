@@ -87,7 +87,11 @@ public:
 	bool IsAgentIDValid(int agent_id);
 	uintptr_t GetGameContextPtr();
 	uintptr_t GetPreGameContextPtr();
-
+	uintptr_t GetWorldContextPtr();
+	uintptr_t GetCharContextPtr();
+	uintptr_t GetAgentContextPtr();
+    uintptr_t GetCinematicPtr();
+	uintptr_t GetGuildContextPtr();
     
 };
 

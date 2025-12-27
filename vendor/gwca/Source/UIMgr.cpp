@@ -64,8 +64,9 @@ namespace {
     };
     std::vector<CreateUIComponentCallbackEntry> OnCreateUIComponent_callbacks;
 
+    /* FRame Logging*/
     GWCA_API std::vector<std::tuple<uint64_t, uint32_t, std::string>> frame_logs;
-    static const size_t MAX_LOGS = 200;
+    static const size_t MAX_LOGS = 500;
 
     void LogFrameLabel(uint32_t frame_id, const wchar_t* label_w)
     {
@@ -274,9 +275,88 @@ namespace {
     };
     std::unordered_map<UI::UIMessage,std::vector<CallbackEntry>> UIMessage_callbacks;
 
+    /* UIMessage Logging*/
+    struct UIPayloadDump {
+        uint64_t tick;
+        uint32_t msgid;
+        bool incoming;
+		bool is_frame_message;  
+		uint32_t frame_id;
+        std::vector<uint8_t> w_bytes;
+        std::vector<uint8_t> l_bytes;
+    };
+
+    // ------------------------------------------
+    GWCA_API static std::vector<UIPayloadDump> ui_payload_logs;
+    static const size_t MAX_PAYLOAD_SIZE = 64;
+
+    static constexpr uint32_t FILTERED_MSGS[] = { 0x15, 0x16, 0x25, 0x2b, 0x2c, 0x35, 0x38, 0x5f };
+
+    bool ShouldFilterMsg(uint32_t msgid) {
+        for (uint32_t m : FILTERED_MSGS) {
+            if (msgid == m)
+                return true;
+        }
+
+        return false;
+    }
+
+    void SafeDumpBytes(std::vector<uint8_t>& dest, void* ptr, size_t max_size)
+    {
+        dest.clear();
+
+        if (!ptr)
+            return;
+
+        // IMPORTANT: guard pointer readability before touching memory
+        if (IsBadReadPtr(ptr, max_size))
+            return;
+
+        uint8_t* src = static_cast<uint8_t*>(ptr);
+
+        // Copy small safe chunk
+        dest.insert(dest.end(), src, src + max_size);
+    }
+
+
+    void LogUIPayload(
+        uint32_t msgid,
+        void* wparam,
+        void* lparam,
+        bool incoming,
+        bool is_frame_message,
+        uint32_t frame_id
+    )
+    {
+        if (is_frame_message)
+            return;
+        // --- FILTER HERE ---
+        //if (ShouldFilterMsg(msgid))
+        //    return;
+
+        
+        
+        UIPayloadDump d{};
+        d.tick = GetTickCount64();
+        d.msgid = msgid;
+        d.incoming = incoming;
+        d.is_frame_message = is_frame_message;
+        d.frame_id = frame_id;
+
+
+        SafeDumpBytes(d.w_bytes, wparam, MAX_PAYLOAD_SIZE);
+        SafeDumpBytes(d.l_bytes, lparam, MAX_PAYLOAD_SIZE);
+
+        ui_payload_logs.emplace_back(std::move(d));
+
+        if (ui_payload_logs.size() > MAX_LOGS)
+            ui_payload_logs.erase(ui_payload_logs.begin());
+    }
+
     void __cdecl OnSendUIMessage(UI::UIMessage msgid, void *wParam, void *lParam)
     {
         HookBase::EnterHook();
+        LogUIPayload((uint32_t)msgid, wParam, lParam, true, false, 0);
         UI::SendUIMessage(msgid, wParam, lParam);
         HookBase::LeaveHook();
     }
@@ -291,8 +371,10 @@ namespace {
 
     void __cdecl OnSendFrameUIMessageById(uint32_t frame_id, UI::UIMessage message_id, void* wParam, void* lParam) {
         HookBase::EnterHook();
-        if (frame_id)
+        if (frame_id) {
+            LogUIPayload((uint32_t)message_id, wParam, lParam, true, true, frame_id);
             SendFrameUIMessageById_Ret(frame_id, message_id, wParam, lParam);
+        }
         HookBase::LeaveHook();
     }
 
@@ -975,6 +1057,51 @@ namespace GW {
 			return frame_logs;
         }
 
+		void ClearFrameLogs() {
+			frame_logs.clear();
+		}
+
+        std::vector<std::tuple<
+            uint64_t,               // tick
+            uint32_t,               // msgid
+            bool,                   // incoming
+            bool,                   // is_frame_message
+            uint32_t,               // frame_id
+            std::vector<uint8_t>,   // w_bytes
+            std::vector<uint8_t>    // l_bytes
+            >> GetUIPayloads()
+        {
+            std::vector<std::tuple<
+                uint64_t,
+                uint32_t,
+                bool,
+                bool,
+                uint32_t,
+                std::vector<uint8_t>,
+                std::vector<uint8_t>
+                >> out;
+
+            out.reserve(ui_payload_logs.size());
+
+            for (const auto& r : ui_payload_logs) {
+                out.emplace_back(
+                    r.tick,
+                    r.msgid,
+                    r.incoming,
+                    r.is_frame_message,
+                    r.frame_id,
+                    r.w_bytes,
+                    r.l_bytes
+                );
+            }
+
+            return out;
+        }
+
+		void ClearUIPayloads() {
+			ui_payload_logs.clear();
+		}
+
         Frame* FrameRelation::GetFrame() {
             const auto frame = (Frame*)((uintptr_t)this - offsetof(struct Frame, relation));
             GWCA_ASSERT(&frame->relation == this);
@@ -1286,10 +1413,17 @@ namespace GW {
         }
 
         bool RawSendUIMessage(UIMessage msgid, void* wParam, void* lParam) {
+            LogUIPayload((uint32_t)msgid, wParam, lParam,
+                /*incoming*/ false,
+                /*is_frame_message*/ false,
+                /*frame_id*/ 0);
+
             if (!RetSendUIMessage)
                 return false;
+
             if (((uint32_t)msgid & 0x30000000) == 0x30000000)
                 return true; // Internal GWCA UI Message, used for hooks
+
             HookBase::EnterHook();
             RetSendUIMessage(msgid, wParam, lParam);
             HookBase::LeaveHook();
@@ -1298,8 +1432,14 @@ namespace GW {
 
         bool SendFrameUIMessage(Frame* frame, UIMessage message_id, void* wParam, void* lParam)
         {
+            LogUIPayload((uint32_t)message_id, wParam, lParam,
+                /*incoming*/ true,
+                /*is_frame_message*/ true,
+                /*frame_id*/ frame ? frame->frame_id : 0);
+            
             if (!(SendFrameUIMessage_Ret && frame && frame->frame_callbacks.size()))
                 return false;
+
 
             const auto& found = FrameUIMessage_callbacks.find(message_id);
             if (found == FrameUIMessage_callbacks.end()) {
@@ -1341,6 +1481,13 @@ namespace GW {
         bool SendUIMessage(UIMessage msgid, void* wParam, void* lParam, bool skip_hooks)
         {
             HookStatus status;
+            if (!skip_hooks) {
+                LogUIPayload((uint32_t)msgid, wParam, lParam,
+                    /*incoming*/ false,
+                    /*is_frame_message*/ false,
+                    /*frame_id*/ 0);
+            }
+
             if (skip_hooks) {
                 return RawSendUIMessage(msgid, wParam, lParam);
             }
