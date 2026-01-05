@@ -90,6 +90,26 @@ void CombatEventQueue::Initialize() {
         }
     );
 
+    // SkillRecharge packet - skill went on cooldown
+    // Contains: agent_id, skill_id, skill_instance, recharge (in milliseconds)
+    // Works for ANY agent - player, heroes, enemies, NPCs!
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillRecharge>(
+        &skill_recharge_entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::SkillRecharge* packet) {
+            OnSkillRecharge(packet);
+        }
+    );
+
+    // SkillRecharged packet - skill came off cooldown
+    // Contains: agent_id, skill_id, skill_instance
+    // Works for ANY agent - player, heroes, enemies, NPCs!
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillRecharged>(
+        &skill_recharged_entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::SkillRecharged* packet) {
+            OnSkillRecharged(packet);
+        }
+    );
+
     is_initialized = true;
 }
 
@@ -101,6 +121,8 @@ void CombatEventQueue::Terminate() {
     GW::StoC::RemoveCallback(GW::Packet::StoC::GenericValueTarget::STATIC_HEADER, &generic_value_target_entry);
     GW::StoC::RemoveCallback(GW::Packet::StoC::GenericFloat::STATIC_HEADER, &generic_float_entry);
     GW::StoC::RemoveCallback(GW::Packet::StoC::GenericModifier::STATIC_HEADER, &generic_modifier_entry);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::SkillRecharge::STATIC_HEADER, &skill_recharge_entry);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::SkillRecharged::STATIC_HEADER, &skill_recharged_entry);
 
     is_initialized = false;
 }
@@ -388,6 +410,51 @@ void CombatEventQueue::OnGenericModifier(GW::Packet::StoC::GenericModifier* pack
     }
 }
 
+/**
+ * @brief Handle SkillRecharge packet.
+ *
+ * This packet fires when a skill goes on cooldown.
+ * Works for ANY agent - player, heroes, enemies, NPCs!
+ *
+ * Great for:
+ * - Building enemy skillbars over time
+ * - Tracking enemy/ally skill cooldowns
+ * - Knowing when enemies can use dangerous skills again
+ *
+ * Fields:
+ * - agent_id: The agent whose skill is recharging
+ * - skill_id: The skill that went on cooldown
+ * - recharge: Cooldown duration in milliseconds
+ */
+void CombatEventQueue::OnSkillRecharge(GW::Packet::StoC::SkillRecharge* packet) {
+    uint32_t now = GetTickCount();
+    // agent_id=who, value=skill_id, float_value=recharge_ms
+    PushEvent(RawCombatEvent(now, CombatEventTypes::SKILL_RECHARGE,
+        packet->agent_id, packet->skill_id, 0, static_cast<float>(packet->recharge)));
+}
+
+/**
+ * @brief Handle SkillRecharged packet.
+ *
+ * This packet fires when a skill comes off cooldown.
+ * Works for ANY agent - player, heroes, enemies, NPCs!
+ *
+ * Great for:
+ * - Knowing when enemies can use skills again
+ * - Triggering actions when your own skills are ready
+ * - Updating tracked enemy skillbar states
+ *
+ * Fields:
+ * - agent_id: The agent whose skill finished recharging
+ * - skill_id: The skill that is now ready to use
+ */
+void CombatEventQueue::OnSkillRecharged(GW::Packet::StoC::SkillRecharged* packet) {
+    uint32_t now = GetTickCount();
+    // agent_id=who, value=skill_id
+    PushEvent(RawCombatEvent(now, CombatEventTypes::SKILL_RECHARGED,
+        packet->agent_id, packet->skill_id, 0, 0.0f));
+}
+
 // ============================================================================
 // Python Bindings
 // ============================================================================
@@ -453,6 +520,8 @@ Note:
     types.attr("ENERGY_SPENT") = CombatEventTypes::ENERGY_SPENT;
     types.attr("SKILL_DAMAGE") = CombatEventTypes::SKILL_DAMAGE;
     types.attr("SKILL_ACTIVATE_PACKET") = CombatEventTypes::SKILL_ACTIVATE_PACKET;
+    types.attr("SKILL_RECHARGE") = CombatEventTypes::SKILL_RECHARGE;
+    types.attr("SKILL_RECHARGED") = CombatEventTypes::SKILL_RECHARGED;
 
     // RawCombatEvent struct
     py::class_<RawCombatEvent>(m, "PyRawCombatEvent")

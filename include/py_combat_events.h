@@ -1,60 +1,35 @@
 /**
  * @file py_combat_events.h
- * @brief Combat Events System - C++ Layer
+ * @brief Combat Events System - C++ Layer (Minimal)
  *
- * This is the C++ component of the Py4GW Combat Events system. It hooks into
- * Guild Wars game packets via GWCA and captures combat-related events into a
- * thread-safe queue that Python polls each frame.
+ * This C++ layer hooks game packets and queues raw events. Hooks auto-initialize
+ * on first access - Python never needs to manage lifecycle.
  *
- * Architecture
- * ------------
- * The combat events system follows a two-layer design:
+ * Architecture (Minimal C++)
+ * --------------------------
+ * C++ does ONE thing: capture packets and push (timestamp, type, agent, value,
+ * target, float_value) tuples to a queue. That's it. All logic is in Python.
  *
- * 1. C++ Layer (this file + py_combat_events.cpp):
- *    - Hooks into game packets using GWCA's StoC (Server-to-Client) callbacks
- *    - Captures relevant combat events (skills, damage, effects, etc.)
- *    - Stores events in a thread-safe queue
- *    - Does minimal processing - just captures and queues raw data
- *
- * 2. Python Layer (CombatEvents.py):
- *    - Polls the C++ queue each frame via GetAndClearEvents()
- *    - Maintains all state tracking (who's casting, attacking, etc.)
- *    - Dispatches callbacks to user-registered handlers
- *    - Handles all game logic and interpretation
- *
- * Hooked Packets
- * --------------
- * - SkillActivate: Sent when a skill starts casting (gives skill_id early)
- * - GenericValue: Most skill/attack state changes (start, finish, interrupt)
- * - GenericValueTarget: Skill/attack events that have a target
- * - GenericFloat: Cast time, knockdown duration, energy spent
- * - GenericModifier: Damage dealt (normal, critical, armor-ignoring)
- *
- * Thread Safety
- * -------------
- * The event queue is protected by a mutex because:
- * - Packet callbacks run in the game thread
- * - Python polls from a different thread
- * All queue access goes through PushEvent/GetAndClearEvents which lock the mutex.
+ * Python Layer (CombatEvents.py):
+ * - Polls GetAndClearEvents() each frame
+ * - Builds state tracking from raw events
+ * - Exposes clean query API (is_agent_casting, can_agent_act, etc.)
+ * - Optional callbacks for reactive code
  *
  * Usage from Python
  * -----------------
  * ```python
- * import PyCombatEvents
- *
+ * # Just access the queue - hooks auto-initialize
  * queue = PyCombatEvents.GetCombatEventQueue()
- * queue.Initialize()  # Register packet hooks
+ * events = queue.GetAndClearEvents()  # Returns list of raw event tuples
  *
- * # Each frame:
- * events = queue.GetAndClearEvents()
- * for event in events:
- *     # Process event.event_type, event.agent_id, etc.
- *
- * queue.Terminate()  # Unregister hooks when done
+ * # Or use the high-level Python wrapper (recommended):
+ * from Py4GWCoreLib import CombatEvents
+ * if CombatEvents.is_agent_casting(enemy_id):
+ *     # React to it
  * ```
  *
  * @see CombatEvents.py for the Python layer that processes these events
- * @see py_combat_events.cpp for the packet handler implementations
  */
 
 #pragma once
@@ -217,6 +192,16 @@ namespace CombatEventTypes {
     constexpr uint32_t SKILL_ACTIVATE_PACKET = 70;  // Early skill activation notification
                                                     // agent_id=caster, value=skill_id
                                                     // From SkillActivate packet (arrives before GenericValue)
+
+    // ---- Skill Recharge Events (from SkillRecharge/SkillRecharged packets) ----
+    // These track when skills go on cooldown and come off cooldown.
+    // Works for ANY agent - player, heroes, enemies, NPCs!
+
+    constexpr uint32_t SKILL_RECHARGE = 80;         // Skill went on cooldown
+                                                    // agent_id=agent, value=skill_id, float_value=recharge time in ms
+
+    constexpr uint32_t SKILL_RECHARGED = 81;        // Skill came off cooldown
+                                                    // agent_id=agent, value=skill_id
 }
 
 // ============================================================================
@@ -303,6 +288,8 @@ private:
     GW::HookEntry generic_float_entry;        // GenericFloat packets (durations, energy)
     GW::HookEntry generic_modifier_entry;     // GenericModifier packets (damage)
     GW::HookEntry skill_activate_entry;       // SkillActivate packets (early skill notification)
+    GW::HookEntry skill_recharge_entry;       // SkillRecharge packets (skill went on cooldown)
+    GW::HookEntry skill_recharged_entry;      // SkillRecharged packets (skill came off cooldown)
 
     // Thread-safe event queue
     mutable std::mutex queue_mutex;
@@ -317,6 +304,8 @@ private:
     void OnGenericValueTarget(GW::Packet::StoC::GenericValueTarget* packet);
     void OnGenericFloat(GW::Packet::StoC::GenericFloat* packet);
     void OnGenericModifier(GW::Packet::StoC::GenericModifier* packet);
+    void OnSkillRecharge(GW::Packet::StoC::SkillRecharge* packet);
+    void OnSkillRecharged(GW::Packet::StoC::SkillRecharged* packet);
 
     /**
      * @brief Add event to queue (thread-safe).
@@ -326,10 +315,20 @@ private:
 };
 
 // ============================================================================
-// Global Singleton
+// Global Singleton - Auto-initializes on first access
 // ============================================================================
 
+/**
+ * @brief Get the global CombatEventQueue singleton.
+ *
+ * The queue auto-initializes packet hooks on first access.
+ * Python never needs to call Initialize() - just access the queue and it works.
+ */
 inline CombatEventQueue& GetCombatEventQueue() {
     static CombatEventQueue instance;
+    // Auto-initialize hooks on first access
+    if (!instance.IsInitialized()) {
+        instance.Initialize();
+    }
     return instance;
 }
