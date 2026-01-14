@@ -412,8 +412,22 @@ std::string _GetNameByID(uint32_t agent_id)
     std::string key = local_WStringToString(enc_w);
 
     // ===== already decoded? =====
-    if (agent_name_map[key].name_ready)
-        return agent_name_map[key].agent_name;
+    auto it = agent_name_map.find(key);
+    if (it != agent_name_map.end() && it->second.name_ready) {
+        const std::string& name = it->second.agent_name;
+
+        if (IsValidUTF8(name)) {
+            return name;
+        }
+
+        // cached garbage - purge lazily
+        GW::GameThread::Enqueue([key]() {
+            agent_name_map.erase(key);
+            });
+        agent_name_pending.erase(key);
+
+        return "";
+    }
 
     // ===== prevent duplicate async fetch =====
     if (agent_name_pending.count(key) != 0)
