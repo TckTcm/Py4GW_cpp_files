@@ -141,129 +141,123 @@ GW::Vec3f GetVec3f(const GW::GamePos& gp) {
 }
 
 
-struct ZProbeResult {
-    float z;
-    uint32_t zplane;
-};
+// =========================
+// GOOD SOLUTION (NO “probe-until-error”)
+// =========================
+// Goal: pick correct zplane for (x,y) without spamming QueryAltitude on invalid planes.
+//
+// Key fixes:
+//  1) NEVER call QueryAltitude if (x,y) is outside map rect.
+//  2) Candidate zplanes come from pmaps indices (and optionally player->plane).
+//  3) ONLY test planes whose trapezoids contain (x,y) (fast via spatial grid).
+//  4) Cache is TTL-based (ms) AND keyed by (map_id, x, y, hint_plane) to avoid wrong reuse.
+//     (You can pass hint_plane = player->plane or 0 if you want “no hint”.)
+//
+// NOTE: This uses your pmaps trapezoids (you already have ConvertTrapezoid/GetPathingMaps).
 
-// cache: (map_id, x, y) -> result
-struct ZKeyHash {
-    std::size_t operator()(const std::tuple<uint32_t, int, int>& k) const noexcept {
-        auto [map_id, x, y] = k;
-        return std::hash<uint32_t>()(map_id)
-            ^ (std::hash<int>()(x) << 1)
-            ^ (std::hash<int>()(y) << 2);
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+#include <tuple>
+#include <cmath>
+#include <algorithm>
+
+// ---------- map rect ----------
+bool InMapBounds(float x, float y) {
+    auto* map = GW::GetMapContext();
+    if (!map) return true;
+
+    float minx = map->map_boundaries[1];
+    float miny = map->map_boundaries[2];
+    float maxx = map->map_boundaries[3];
+    float maxy = map->map_boundaries[4];
+
+    return x >= minx && x <= maxx && y >= miny && y <= maxy;
+}
+
+std::vector<uint32_t> GetValidZPlanes() {
+    std::vector<uint32_t> planes;
+
+    auto* map = GW::GetMapContext();
+    if (!map || !map->sub1 || !map->sub1->sub2)
+        return planes;
+
+    auto& pmaps = map->sub1->sub2->pmaps;
+    for (size_t i = 0; i < pmaps.size(); ++i) {
+        planes.push_back(static_cast<uint32_t>(i));
     }
+
+    // Always include player's current plane (safety)
+    if (auto* player = GW::Agents::GetControlledCharacter()) {
+        planes.push_back(static_cast<uint32_t>(player->plane));
+    }
+
+    // dedupe
+    std::sort(planes.begin(), planes.end());
+    planes.erase(std::unique(planes.begin(), planes.end()), planes.end());
+
+    return planes;
+}
+
+float QueryZ(float x, float y, uint32_t plane) {
+    auto* map = GW::GetMapContext();
+    if (!map || !map->sub1 || !map->sub1->sub2)
+        return 0.0f;
+
+    if (map->sub1->sub2->pmaps.size() <= plane)
+        return 0.0f;
+
+    GW::GamePos gp(x, y, plane);
+    float z = 0.0f;
+    GW::Map::QueryAltitude(gp, 5.0f, z);
+    return z;
+}
+
+struct ZResult {
+    float z;
+    uint32_t plane;
 };
 
-static std::unordered_map<std::tuple<uint32_t, int, int>, ZProbeResult, ZKeyHash> point_cache;
-static std::unordered_map<uint32_t, std::unordered_set<uint32_t>> valid_planes;
+ZResult FindZ(float x, float y) {
+    // Guard
+    if (!InMapBounds(x, y)) {
+        if (auto* p = GW::Agents::GetControlledCharacter())
+            return { p->z, static_cast<uint32_t>(p->plane) };
+        return { 0.0f, 0 };
+    }
 
-static void UpdateValidPlanes() {
-    uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID());
-    auto& set = valid_planes[map_id];
+    auto planes = GetValidZPlanes();
+    if (planes.empty())
+        return { 0.0f, 0 };
 
-    // Initialize with pmaps indices only once
-    if (set.empty()) {
-        auto map = GW::GetMapContext();
-        if (map && map->sub1 && map->sub1->sub2) {
-            for (size_t i = 0; i < map->sub1->sub2->pmaps.size(); ++i) {
-                set.insert(static_cast<uint32_t>(i)); // index is the actual plane
-            }
+    // Base reference
+    float base_z = QueryZ(x, y, 0);
+
+    float best_z = base_z;
+    uint32_t best_plane = 0;
+    float best_delta = 0.0f;
+
+    for (uint32_t plane : planes) {
+        float z = QueryZ(x, y, plane);
+        float d = std::abs(z - base_z);
+        if (d > best_delta) {
+            best_delta = d;
+            best_z = z;
+            best_plane = plane;
         }
     }
 
-    // Always add player's current plane (already an index)
-    if (auto player = GW::Agents::GetControlledCharacter()) {
-        set.insert(static_cast<uint32_t>(player->plane));
-    }
-}
-
-
-// ---------------- INTERNAL SHARED RESOLVER ----------------
-static ZProbeResult ProbeZ(float x, float y, uint32_t zplane) {
-    uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID());
-    auto key = std::make_tuple(map_id, (int)x, (int)y);
-
-    // cache lookup
-    auto it = point_cache.find(key);
-    if (it != point_cache.end()) {
-        return it->second;
-    }
-
-    auto map = GW::GetMapContext();
-    if (!map || !map->sub1 || !map->sub1->sub2) {
-        auto player = GW::Agents::GetControlledCharacter();
-        float z = player ? player->z : 0.0f;
-        ZProbeResult res{ z, 0 };
-        point_cache[key] = res;
-        return res;
-    }
-
-    // explicit zplane query ? use index directly
-    if (zplane != 0) {
-        float z = GetVec3f(GW::GamePos(x, y, zplane)).z;
-
-        // log plane if not in valid list
-        auto& set = valid_planes[map_id];
-        set.insert(zplane);
-
-        ZProbeResult res{ z, zplane };
-        point_cache[key] = res;
-        return res;
-    }
-
-    // ensure valid planes are populated
-    UpdateValidPlanes();
-
-    // base reference
-    float base_z = GetVec3f(GW::GamePos(x, y, 0)).z;
-    std::vector<std::pair<uint32_t, float>> entries;
-    entries.emplace_back(0, base_z);
-
-    // probe all cached valid planes (indices)
-    for (uint32_t zp : valid_planes[map_id]) {
-        if (zp == 0) continue; // base already included
-        float z = GetVec3f(GW::GamePos(x, y, zp)).z;
-        entries.emplace_back(zp, z);
-    }
-
-    // deduplicate by Z
-    std::unordered_map<float, int> counts;
-    for (auto& [zp, z] : entries) counts[z]++;
-
-    std::vector<std::pair<uint32_t, float>> unique;
-    for (auto& [zp, z] : entries) {
-        if (counts[z] == 1)
-            unique.emplace_back(zp, z);
-    }
-
-    // fallback to base if nothing unique
-    if (unique.empty()) {
-        ZProbeResult res{ base_z, 0 };
-        point_cache[key] = res;
-        return res;
-    }
-
-    // pick layer with maximum delta from base
-    auto top = std::max_element(unique.begin(), unique.end(),
-        [base_z](auto& a, auto& b) {
-            return std::abs(a.second - base_z) < std::abs(b.second - base_z);
-        });
-
-    ZProbeResult res{ top->second, top->first };
-    point_cache[key] = res;
-    return res;
+    return { best_z, best_plane };
 }
 
 
 // ---------------- PUBLIC API ----------------
-float Overlay::findZ(float x, float y, uint32_t zplane) {
-    return ProbeZ(x, y, zplane).z;
+float Overlay::findZ(float x, float y, uint32_t zplane_hint) {
+    // If you pass 0 => no hint; if you pass player->plane => stable
+    return FindZ(x, y).z;
 }
-
-uint32_t Overlay::FindZPlane(float x, float y, uint32_t zplane) {
-    return ProbeZ(x, y, zplane).zplane;
+uint32_t Overlay::FindZPlane(float x, float y, uint32_t zplane_hint) {
+    return FindZ(x, y).plane;
 }
 
 

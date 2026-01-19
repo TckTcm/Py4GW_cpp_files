@@ -380,9 +380,21 @@ struct AgentNameData {
 // Global map for storing multiple agent name requests
 static std::unordered_map<std::string, AgentNameData> agent_name_map;
 static std::unordered_set<std::string> agent_name_pending;
+static uint32_t cached_map_id = 0;
+
+void _ClearNameCache() {
+    agent_name_map.clear();
+}
 
 std::string _GetNameByID(uint32_t agent_id)
 {
+    
+	auto map_id = static_cast<uint32_t>(GW::Map::GetMapID());
+	if (map_id != cached_map_id) {
+		cached_map_id = map_id;
+			agent_name_map.clear();
+	}
+    
     const auto agentid = agent_id;
 
     auto in_cinematic = GW::Map::GetIsInCinematic();
@@ -490,6 +502,9 @@ std::string _GetNameByID(uint32_t agent_id)
 
     return "";
 }
+
+
+
 
 
 void PyLivingAgent::RequestName() {
@@ -841,108 +856,22 @@ void PyAgent::GetContext() {
     
 }
 
-bool PyAgent::IsValid(int agent_id) {
-	if (!agent_id) return false;
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
-	if (!agent) return false;
-    return true;
-}
-
-
-uintptr_t PyAgent::GetAgentEncNamePtr(uint32_t agent_id)
-{
-    return reinterpret_cast<uintptr_t>(GW::Agents::GetAgentEncName(agent_id));
-}
-
-
 
 
 std::string PyAgent::GetNameByID(uint32_t agent_id) {
-	return _GetNameByID(agent_id);
+    return "Feature Disabled";
+	//return _GetNameByID(agent_id);
 }
 
-
-
+void PyAgent::ClearNameCache() {
+    _ClearNameCache();
+}
 
 
 std::vector<PyAgent> agent_ids = {};
 std::chrono::steady_clock::time_point last_agent_array_update = std::chrono::steady_clock::now();
 
-std::vector<PyAgent>& GetRawAgentArray() {
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_agent_array_update);
 
-    auto instance_type = GW::Map::GetInstanceType();
-    bool is_map_ready = GW::Map::GetIsMapLoaded() && !GW::Map::GetIsObserving() && (instance_type != GW::Constants::InstanceType::Loading);
-    bool is_in_cinematic = GW::Map::GetIsInCinematic();
-
-    if (!is_map_ready || is_in_cinematic) {
-        agent_ids.clear();  // clear safely
-        last_agent_array_update = now;
-        return agent_ids;
-    }
-
-    if (elapsed.count() < 60)
-        return agent_ids;
-
-    last_agent_array_update = now;
-
-    GW::GameThread::Enqueue([]() {
-        const auto agents = GW::Agents::GetAgentArray();
-        if (!agents || !agents->valid()) {
-            agent_ids.clear();
-            return;
-        }
-
-        std::unordered_set<int> current_ids;
-        for (GW::Agent* agent : *agents) {
-            if (!agent) continue;
-            if (agent->agent_id == 0) continue;
-            current_ids.insert(agent->agent_id);
-        }
-
-        // Remove stale agents and update existing ones
-        for (auto it = agent_ids.begin(); it != agent_ids.end(); ) {
-            if (current_ids.count(it->id) == 0) {
-                it = agent_ids.erase(it);
-            }
-            else {
-                it->GetContext();  // Update only if still present
-                ++it;
-            }
-        }
-
-        // Add new agents
-        for (int id : current_ids) {
-            bool exists = std::any_of(agent_ids.begin(), agent_ids.end(), [id](const PyAgent& a) {
-                return a.id == id;
-                });
-            if (!exists)
-                agent_ids.emplace_back(id); // PyAgent created only if not found
-        }
-        });
-
-    return agent_ids;
-}
-
-
-
-std::vector<std::pair<int, int>> GetMovementStuckArray() {
-	std::vector<std::pair<int, int>> movement_stuck_array = {};
-    GW::AgentContext* ctx = GW::GetAgentContext();
-    if (ctx) {
-        for (uint32_t i = 0; i < ctx->agent_movement.size(); ++i) {
-            GW::AgentMovement* movement = ctx->agent_movement[i];
-            if (!movement) continue;
-            uint32_t agent_id = movement->agent_id;
-            uint32_t movement_stuck = movement->moving1;
-			movement_stuck_array.push_back(std::make_pair(agent_id, movement_stuck));
-
-        }
-
-    }
-	return movement_stuck_array;
-}
 
 
 // Bind the Profession enum
@@ -1234,7 +1163,7 @@ void bind_PyAgent(py::module_& m) {
         .def(py::init<int>())  // Constructor with agent_id
         .def("Set", &PyAgent::Set)  // Set method to update agent_id and context
         .def("GetContext", &PyAgent::GetContext)  // Method to refresh the context
-        .def("IsValid", &PyAgent::IsValid)  // Method to check if the agent is valid
+
         .def_readonly("id", &PyAgent::id)  // Access to the id field
         .def_readonly("x", &PyAgent::x)  // Access to the x field
         .def_readonly("y", &PyAgent::y)  // Access to the y field
@@ -1283,16 +1212,12 @@ void bind_PyAgent(py::module_& m) {
         //.def_readonly("rand1", &PyAgent::rand1)  // Access to the rand1 field
         //.def_readonly("rand2", &PyAgent::rand2)  // Access to the rand2 field
 
-        .def_static("GetRawAgentArray", &GetRawAgentArray)  // Static method to get raw agent array
-        .def_static("GetMovementStuckArray", &GetMovementStuckArray)  // Static method to get movement stuck array
-
-		.def_static("GetAgentEncNamePtr", &PyAgent::GetAgentEncNamePtr,
-			py::arg("agent_id"),
-			"Get the pointer to the encoded agent name for the given agent ID")
 
 		.def_static("GetNameByID", &PyAgent::GetNameByID,
 			py::arg("agent_id"),
-			"Get the decoded name of the agent by its ID");
+			"Get the decoded name of the agent by its ID")
+
+        .def_static("ClearNameCache", &PyAgent::ClearNameCache, "Clear the cached agent names");
 		
 
 }

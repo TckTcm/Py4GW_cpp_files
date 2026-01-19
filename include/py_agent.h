@@ -416,9 +416,8 @@ public:
     void Set(int agent_id);
     void GetContext();  // Updated method to take agent_id as a parameter
 	void ResetContext();
-	bool IsValid(int agent_id);
+    static void ClearNameCache();
 
-    static uintptr_t GetAgentEncNamePtr(uint32_t agent_id);
 
     static std::string GetNameByID(uint32_t agent_id);
 

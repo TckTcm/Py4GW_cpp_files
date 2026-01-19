@@ -769,6 +769,15 @@ void EnqueuePythonCallback(py::function func) {
     // move func into the lambda so it stays alive
     GW::GameThread::Enqueue([func = std::move(func)]() mutable {
         // We're now running on the GW game thread here
+
+        auto instance_type = GW::Map::GetInstanceType();
+        bool is_map_ready = (GW::Map::GetIsMapLoaded()) && (instance_type != GW::Constants::InstanceType::Loading);
+
+        if (!is_map_ready) {
+
+            return;
+        }
+
         py::gil_scoped_acquire gil;
         try {
             func();  // Call the Python function with no args
@@ -779,7 +788,6 @@ void EnqueuePythonCallback(py::function func) {
         }
         });
 }
-
 
 
 /* ------------------------------------------------------------------*/
@@ -1530,7 +1538,20 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
     }
 }
 
+/* ------------------------------------------------------------------*/
+/* --------------------- Misc Functions  ----------------------------*/
+/* ------------------------------------------------------------------*/
 
+bool InCharacterSelectScreen()
+{
+    const GW::PreGameContext* pgc = GW::GetPreGameContext();
+    if (!pgc || !pgc->chars.valid()) {
+        return false;
+    }
+    uint32_t ui_state = 10;
+    SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
+    return ui_state == 2;
+}
 
 /* ------------------------------------------------------------------*/
 /* --------------------- Python Bindings ----------------------------*/
@@ -1538,12 +1559,18 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 
 void bind_Game(py::module_& game)
 {
+    game.def("InCharacterSelectScreen", &InCharacterSelectScreen, "Check if the character select screen is ready");
+    
     game.def("enqueue",&EnqueuePythonCallback,"Enqueue a Python callback to run on the GW game thread");
+
     game.def("get_tick_count64",&Get_Tick_Count64,"Get the current tick count as a 64-bit integer");
     game.def("register_callback",&RegisterFrameCallback,"Register a named per-frame callback (idempotent by name)" );
     game.def("remove_callback_by_id",&RemoveFrameCallbackById,"Remove a per-frame callback by id");
     game.def("remove_callback",&RemoveFrameCallbackByName,"Remove a per-frame callback by name");
-    game.def("clear_callbacks", &RemoveAllFrameCallbacks,"Remove all registered per-frame callbacks");
+    game.def("clear_callbacks", &RemoveAllFrameCallbacks, "Remove all registered per-frame callbacks");
+	
+
+        
 }
 
 void bind_Console(py::module_& console)

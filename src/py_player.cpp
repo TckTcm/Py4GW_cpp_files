@@ -2,42 +2,6 @@
 
 namespace py = pybind11;
 
-class PyTitle {
-public:
-    uint32_t title_id = 0;
-    uint32_t props = 0;
-    uint32_t current_points = 0;
-    uint32_t current_title_tier_index = 0;
-    uint32_t points_needed_current_rank = 0;
-    uint32_t next_title_tier_index = 0;
-    uint32_t points_needed_next_rank = 0;
-    uint32_t max_title_rank = 0;
-    uint32_t max_title_tier_index = 0;
-    bool is_percentage_based = false;
-    bool has_tiers = false;
-
-    PyTitle(uint32_t title) {
-        title_id = title;
-        GetContext();
-    }
-
-    void GetContext() {
-        auto title = GW::PlayerMgr::GetTitleTrack(static_cast<GW::Constants::TitleID>(title_id));
-        if (title) {
-			props = title->props;
-			current_points = title->current_points;
-			current_title_tier_index = title->current_title_tier_index;
-			points_needed_current_rank = title->points_needed_current_rank;
-			next_title_tier_index = title->next_title_tier_index;
-			points_needed_next_rank = title->points_needed_next_rank;
-			max_title_rank = title->max_title_rank;
-			max_title_tier_index = title->max_title_tier_index;
-			is_percentage_based = title->is_percentage_based();
-			has_tiers = title->has_tiers();          
-        }
-    }
-};
-
 PyPlayer::PyPlayer() {
     GetContext();
 }
@@ -125,7 +89,7 @@ void PyPlayer::GetContext() {
     agent = id;
     target_id = static_cast<int>(GW::Agents::GetTargetId());  
     //mouse_over_id = static_cast<int>(GW::Agents::GetMouseoverId());  
-    mouse_over_id = 0; 
+    //mouse_over_id = 0; 
     observing_id = static_cast<int>(GW::Agents::GetObservingId()); 
 
     if (GW::Map::GetIsMapLoaded()) {
@@ -221,129 +185,11 @@ void PyPlayer::GetContext() {
 
 }
 
-template<typename FilterFn>
-std::vector<int> FilterAgents(FilterFn&& filter) {
-    std::vector<int> result;
-
-    const auto agents = GW::Agents::GetAgentArray();
-    if (!agents) return result;
-
-    const auto ac = GW::GetAgentContext();
-    if (!ac) return result;
-
-    for (const GW::Agent* agent : *agents) {
-        if (!agent)
-            continue;
-
-        uint32_t id = agent->agent_id;
-        if (!id)
-            continue;
-
-        //Stale pointer check
-        if (!(ac->agent_movement.size() > id &&
-            ac->agent_movement[id]))
-            continue;
-
-        //Execute your custom filter
-        if (!filter(agent))
-            continue;
-
-        result.push_back(static_cast<int>(id));
-    }
-
-    if (result.empty())
-        result.push_back(0);
-
-    return result;
-}
 
 
-std::vector<int> PyPlayer::GetAgentArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        return true; // accept all valid agents
-        });
-}
 
 
-std::vector<int> PyPlayer::GetAllyArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Ally_NonAttackable;
-        });
-}
 
-
-std::vector<int> PyPlayer::GetNeutralArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Neutral;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetEnemyArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Enemy;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetSpiritPetArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Spirit_Pet;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetMinionArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Minion;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetNPCMinipetArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsLivingType()) return false;
-        const auto living = agent->GetAsAgentLiving();
-        return living && living->allegiance == GW::Constants::Allegiance::Npc_Minipet;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetItemArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsItemType()) return false;
-        const auto item = agent->GetAsAgentItem();
-        return item && item->agent_id;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetOwnedItemArray(int owner_agent_id) {
-    return FilterAgents([owner_agent_id](const GW::Agent* agent) {
-        if (!agent->GetIsItemType()) return false;
-        const auto item = agent->GetAsAgentItem();
-        return item && item->owner == owner_agent_id;
-        });
-}
-
-
-std::vector<int> PyPlayer::GetGadgetArray() {
-    return FilterAgents([](const GW::Agent* agent) {
-        if (!agent->GetIsGadgetType()) return false;
-        const auto gadget = agent->GetAsAgentGadget();
-        return gadget && gadget->agent_id;
-        });
-}
 
 
 std::string local_player_WStringToString(const std::wstring& s) {
@@ -457,92 +303,13 @@ void PyPlayer::SendFakeChatColored(int channel, std::string message, int r, int 
 	GW::Chat::SendFakeChatColored(channel, message, r, g, b);
 }
 
-std::string PyPlayer::FormatChatMessage(const std::string message, int r, int g, int b) {
-	return GW::Chat::FormatChatMessage(message, r, g, b);
-}
 
-bool PyPlayer::ChangeTarget(uint32_t new_target_id) {
-	if (new_target_id == 0) return false;
-
-    auto agent = GW::Agents::GetAgentByID(new_target_id);
-    if (!agent) return false;
-
-    GW::GameThread::Enqueue([agent, new_target_id] {
-        if (GW::Agent* a = GW::Agents::GetAgentByID(new_target_id)) {
-            GW::Agents::ChangeTarget(agent);
-        }
-    });
-    return true;
-}
-
-bool PyPlayer::Move(float x, float y, int zplane) {
-    GW::GameThread::Enqueue([x,y,zplane] {
-        GW::Agents::Move(x, y, zplane);
-        });
-    return true;
-}
-
-bool PyPlayer::Move(float x, float y) {
-    GW::GamePos pos;
-    pos.x = x;
-    pos.y = y;
-
-    GW::GameThread::Enqueue([pos] {
-        GW::Agents::Move(pos);
-        });
-    return true;
-}
-
-bool PyPlayer::InteractAgent(int agent_id, bool call_target) {
-    if (agent_id == 0) return false;
-
-    GW::GameThread::Enqueue([agent_id, call_target] {
-        if (GW::Agent* a = GW::Agents::GetAgentByID(agent_id)) {
-            GW::Agents::InteractAgent(a, call_target);
-        }
-        });
-    return true;
-}
-
-bool PyPlayer::OpenLockedChest(bool use_key) {
-    //return GW::Items::OpenLockedChest(use_key);
-    return false;
-}
 
 void PyPlayer::SendDialog(uint32_t dialog_id) {
     GW::Agents::SendDialog(dialog_id);
 }
 
-bool PyPlayer::SetActiveTitle(uint32_t title_id) {
-    GW::GameThread::Enqueue([title_id] {
-	    GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(title_id));
-        });
-    return true;
-}
 
-bool PyPlayer::RemoveActiveTitle() {
-	return GW::PlayerMgr::RemoveActiveTitle();
-}
-
-bool PyPlayer::DepositFaction(uint32_t allegiance) {
-	return GW::PlayerMgr::DepositFaction(allegiance);
-}
-
-uint32_t PyPlayer::GetActiveTitleId() {
-	return static_cast<uint32_t>(GW::PlayerMgr::GetActiveTitleId());
-}
-
-std::vector<int> PyPlayer::GetTitleArray() {
-	return GW::PlayerMgr::GetTitleIDs();   
-}
-
-uintptr_t PyPlayer::GetGameContextPtr() {
-	return reinterpret_cast<uintptr_t>(GW::GetGameContext());
-}
-
-uintptr_t PyPlayer::GetPreGameContextPtr() {
-	return reinterpret_cast<uintptr_t>(GW::GetPreGameContext());
-}
 
 namespace GW {
     struct AvailableCharacterInfo {
@@ -612,117 +379,7 @@ namespace GW {
     }
 }
 
-struct AvailableCharacterInfo {
-    std::vector<uint32_t> h0000;
-    std::vector<uint32_t> uuid;
-	std::string player_name;
-	std::vector<uint32_t> props;
 
-    uint32_t map_id;
-	uint32_t primary;
-	uint32_t secondary;
-	uint32_t campaign;
-	uint32_t level;
-	bool is_pvp;
-
-};
-
-struct PyPregameLoginCharacter {
-	uint32_t unk0;
-	uint32_t pvp_or_campaign;
-	uint32_t UnkPvPData01;
-	uint32_t UnkPvPData02;
-	uint32_t UnkPvPData03;
-	uint32_t UnkPvPData04;
-	uint32_t Level;
-	uint32_t current_map_id;
-	std::string character_name;
-};
-
-struct PyPreGameContext {
-    uint32_t frame_id =0;
-    uint32_t chosen_character_index =0;
-    std::vector<PyPregameLoginCharacter> chars;
-
-};
-
-
-
-PyPreGameContext GetPreGameContext() {
-	PyPreGameContext pgc;
-    
-	const auto pregame = GW::GetPreGameContext();
-	if (!pregame) return pgc;
-	pgc.frame_id = pregame->frame_id;
-	pgc.chosen_character_index = pregame->chosen_character_index;
-	
-    for (size_t i = 0; i < pregame->chars.size(); ++i) {
-        const auto& login_char = pregame->chars[i];
-        std::wstring wname(login_char.character_name);
-        std::string char_name(wname.begin(), wname.end());  // Simple conversion
-		pgc.chars.push_back(PyPregameLoginCharacter{
-			login_char.unk0,
-			login_char.pvp_or_campaign,
-			login_char.UnkPvPData01,
-			login_char.UnkPvPData02,
-			login_char.UnkPvPData03,
-			login_char.UnkPvPData04,
-			login_char.Level,
-			login_char.current_map_id,
-			char_name
-			});
-    }
-    
-	return pgc;
-}
-
-
-std::vector<AvailableCharacterInfo> GetAvailableCharacters() {
-	std::vector<AvailableCharacterInfo> available_characters;
-	const auto characters = GW::AccountMgr::GetAvailableChars();
-	if (!characters) return available_characters;
-	for (const auto& ac : *characters) {
-		AvailableCharacterInfo character;
-		character.h0000.push_back(ac.h0000[0]);
-		character.h0000.push_back(ac.h0000[1]);
-		character.uuid.push_back(ac.uuid[0]);
-		character.uuid.push_back(ac.uuid[1]);
-		character.uuid.push_back(ac.uuid[2]);
-		character.uuid.push_back(ac.uuid[3]);
-		character.player_name = std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(ac.player_name);
-		for (int i = 0; i < 17; ++i) { character.props.push_back(ac.props[i]); }
-        character.map_id = (character.props[0] >> 16) & 0xffff;
-		character.primary = ((character.props[2] >> 20) & 0xf);
-		character.secondary = ((character.props[7] >> 10) & 0xf);
-		character.campaign = (character.props[7] & 0xf);
-		character.level = ((character.props[7] >> 4) & 0x3f);
-		character.is_pvp = ((character.props[7] >> 9) & 0x1) == 0x1;
-		available_characters.push_back(character);
-	}
-	return available_characters;
-}
-
-void LogouttoCharacterSelect() {
-
-	GW::GameThread::Enqueue([]() {
-        GW::UI::UIPacket::kLogout packet{};
-        packet.unknown = 0;
-        packet.character_select = 0;
-
-        SendUIMessage(GW::UI::UIMessage::kLogout, &packet);
-		});
-}
-
-bool GetIsCharacterSelectReady()
-{
-    const GW::PreGameContext* pgc = GW::GetPreGameContext();
-    if (!pgc || !pgc->chars.valid()) {
-        return false;
-    }
-    uint32_t ui_state = 10;
-    SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
-    return ui_state == 2;
-}
 
 bool PyPlayer::IsAgentIDValid(int agent_id) {
 	const auto agent = GW::Agents::GetAgentByID(agent_id);
@@ -731,119 +388,12 @@ bool PyPlayer::IsAgentIDValid(int agent_id) {
 }
 
 
-uintptr_t PyPlayer::GetWorldContextPtr() {
-	return reinterpret_cast<uintptr_t>(GW::GetWorldContext());
-}
 
-uintptr_t PyPlayer::GetCharContextPtr() {
-	return reinterpret_cast<uintptr_t>(GW::GetCharContext());
-}
-
-uintptr_t PyPlayer::GetAgentContextPtr() {
-	return reinterpret_cast<uintptr_t>(GW::GetAgentContext());
-}
-
-uintptr_t PyPlayer::GetCinematicPtr() {
-	auto* game_context = GW::GetGameContext();
-	return reinterpret_cast<uintptr_t>(game_context->cinematic);
-}
-
-uintptr_t PyPlayer::GetGuildContextPtr() {
-	auto* game_context = GW::GetGameContext();
-	return reinterpret_cast<uintptr_t>(game_context->guild);
-}
-
-
-void BindPyTitle(py::module_& m) {
-    py::class_<PyTitle>(m, "PyTitle")
-        .def(py::init<uint32_t>(), py::arg("title_id"))  // Constructor with title_id
-        .def("GetContext", &PyTitle::GetContext)  // Method to populate the title context
-
-        // Bind the public attributes with snake_case naming convention
-        .def_readonly("title_id", &PyTitle::title_id)
-        .def_readonly("props", &PyTitle::props)
-        .def_readonly("current_points", &PyTitle::current_points)
-        .def_readonly("current_title_tier_index", &PyTitle::current_title_tier_index)
-        .def_readonly("points_needed_current_rank", &PyTitle::points_needed_current_rank)
-        .def_readonly("next_title_tier_index", &PyTitle::next_title_tier_index)
-        .def_readonly("points_needed_next_rank", &PyTitle::points_needed_next_rank)
-        .def_readonly("max_title_rank", &PyTitle::max_title_rank)
-        .def_readonly("max_title_tier_index", &PyTitle::max_title_tier_index)
-        .def_readonly("is_percentage_based", &PyTitle::is_percentage_based)
-        .def_readonly("has_tiers", &PyTitle::has_tiers);
-}
-
-void BindAvailableCharacterInfo(py::module_& m) {
-	py::class_<AvailableCharacterInfo>(m, "LoginCharacterInfo")
-		.def(py::init<>())  // Constructor
-		.def_readonly("h0000", &AvailableCharacterInfo::h0000)
-		.def_readonly("uuid", &AvailableCharacterInfo::uuid)
-		.def_readonly("player_name", &AvailableCharacterInfo::player_name)
-		.def_readonly("props", &AvailableCharacterInfo::props)
-		.def_readonly("map_id", &AvailableCharacterInfo::map_id)
-		.def_readonly("primary", &AvailableCharacterInfo::primary)
-		.def_readonly("secondary", &AvailableCharacterInfo::secondary)
-		.def_readonly("campaign", &AvailableCharacterInfo::campaign)
-		.def_readonly("level", &AvailableCharacterInfo::level)
-		.def_readonly("is_pvp", &AvailableCharacterInfo::is_pvp);
-}
-
-void BindPreGameContext(py::module_& m) {
-	py::class_<PyPregameLoginCharacter>(m, "PyPregameLoginCharacter")
-		.def(py::init<>())  // Constructor
-		.def_readonly("unk0", &PyPregameLoginCharacter::unk0)
-		.def_readonly("pvp_or_campaign", &PyPregameLoginCharacter::pvp_or_campaign)
-		.def_readonly("UnkPvPData01", &PyPregameLoginCharacter::UnkPvPData01)
-		.def_readonly("UnkPvPData02", &PyPregameLoginCharacter::UnkPvPData02)
-		.def_readonly("UnkPvPData03", &PyPregameLoginCharacter::UnkPvPData03)
-		.def_readonly("UnkPvPData04", &PyPregameLoginCharacter::UnkPvPData04)
-		.def_readonly("Level", &PyPregameLoginCharacter::Level)
-		.def_readonly("current_map_id", &PyPregameLoginCharacter::current_map_id)
-		.def_readonly("character_name", &PyPregameLoginCharacter::character_name);
-
-	py::class_<PyPreGameContext>(m, "PyPreGameContext")
-		.def(py::init<>())  // Constructor
-		.def_readonly("frame_id", &PyPreGameContext::frame_id)
-		.def_readonly("chosen_character_index", &PyPreGameContext::chosen_character_index)
-		.def_readonly("chars", &PyPreGameContext::chars);
-}
 
 void BindPyPlayer(py::module_& m) {
     py::class_<PyPlayer>(m, "PyPlayer")
         .def(py::init<>())  // Bind the constructor
         .def("GetContext", &PyPlayer::GetContext)  // Bind the GetContext method
-        .def("GetAgentArray", &PyPlayer::GetAgentArray)  // Bind the GetAgentArray method
-        .def("GetAllyArray", &PyPlayer::GetAllyArray)  // Bind the GetAllyArray method
-        .def("GetNeutralArray", &PyPlayer::GetNeutralArray)  // Bind the GetNeutralArray method
-        .def("GetEnemyArray", &PyPlayer::GetEnemyArray)  // Bind the GetEnemyArray method
-        .def("GetSpiritPetArray", &PyPlayer::GetSpiritPetArray)  // Bind the GetSpiritPetArray method
-        .def("GetMinionArray", &PyPlayer::GetMinionArray)  // Bind the GetMinionArray method
-        .def("GetNPCMinipetArray", &PyPlayer::GetNPCMinipetArray)  // Bind the GetNPCMinipetArray method
-        .def("GetItemArray", &PyPlayer::GetItemArray)  // Bind the GetItemArray method
-        .def("GetOwnedItemArray", &PyPlayer::GetOwnedItemArray, py::arg("owner_agent_id"))  // Bind the GetOwnedItemArray method
-        .def("GetGadgetArray", &PyPlayer::GetGadgetArray)  // Bind the GetGadgetArray method
-        .def("IsAgentIDValid", &PyPlayer::IsAgentIDValid, py::arg("agent_id"))  // Bind the IsAgentIDValid method
-        .def("GetChatHistory", &PyPlayer::GetChatHistory)  // Bind the GetChatHistory method
-        .def("RequestChatHistory", &PyPlayer::RequestChatHistory)  // Bind the RequestChatHistory method
-        .def("IsChatHistoryReady", &PyPlayer::IsChatHistoryReady)  // Bind the IsChatHistoryReady method
-		.def("Istyping", &PyPlayer::Istyping)  // Bind the Istyping method
-        .def("SendChatCommand", &PyPlayer::SendChatCommand, py::arg("msg"))  // Bind the SendChatCommand method
-        .def("SendChat", &PyPlayer::SendChat, py::arg("channel"), py::arg("msg"))  // Bind the SendChat method
-        .def("SendWhisper", &PyPlayer::SendWhisper, py::arg("name"), py::arg("msg"))  // Bind the SendWhisper method
-        .def("SendFakeChat", &PyPlayer::SendFakeChat, py::arg("channel"), py::arg("message"))  // Bind the SendFakeChat method
-        .def("SendFakeChatColored", &PyPlayer::SendFakeChatColored, py::arg("channel"), py::arg("message"), py::arg("r"), py::arg("g"), py::arg("b"))  // Bind the SendFakeChatColored method
-        .def("FormatChatMessage", &PyPlayer::FormatChatMessage, py::arg("message"), py::arg("r"), py::arg("g"), py::arg("b"))  // Bind the FormatChatMessage method
-        .def("ChangeTarget", &PyPlayer::ChangeTarget, py::arg("target_id"))  // Bind the ChangeTarget method
-        .def("Move", py::overload_cast<float, float, int>(&PyPlayer::Move), py::arg("x"), py::arg("y"), py::arg("zplane"))  // Bind the Move method (with zplane)
-        .def("Move", py::overload_cast<float, float>(&PyPlayer::Move), py::arg("x"), py::arg("y"))  // Bind the Move method (without zplane)
-        .def("InteractAgent", &PyPlayer::InteractAgent, py::arg("agent_id"), py::arg("call_target"))  // Bind the InteractAgent method
-        .def("OpenLockedChest", &PyPlayer::OpenLockedChest, py::arg("use_key"))  // Bind the OpenLockedChest method
-        .def("SendDialog", &PyPlayer::SendDialog, py::arg("dialog_id"))  // Bind the SendDialog method
-        .def("SetActiveTitle", &PyPlayer::SetActiveTitle, py::arg("title_id"))  // Bind the SetActiveTitle method
-        .def("RemoveActiveTitle", &PyPlayer::RemoveActiveTitle)  // Bind the RemoveActiveTitle method
-        .def("DepositFaction", &PyPlayer::DepositFaction, py::arg("allegiance"))  // Bind the DepositFaction method
-        .def("GetActiveTitleId", &PyPlayer::GetActiveTitleId)  // Bind the GetActiveTitleId method
-		.def("GetTitleArray", &PyPlayer::GetTitleArray)  // Bind the GetTitleArray method
 
         // Bind public attributes with snake_case naming convention
         .def_readonly("id", &PyPlayer::id)  // Bind the id attribute
@@ -853,7 +403,7 @@ void BindPyPlayer(py::module_& m) {
         .def_readonly("observing_id", &PyPlayer::observing_id)  // Bind the observing_id attribute
         .def_readonly("account_name", &PyPlayer::account_name) // Bind the account_name attribute
         .def_readonly("account_email", &PyPlayer::account_email)  // Bind the account_email attribute
-		.def_readonly("player_uuid", &PyPlayer::player_uuid)  // Bind the player_uuid attribute
+        .def_readonly("player_uuid", &PyPlayer::player_uuid)  // Bind the player_uuid attribute
         .def_readonly("wins", &PyPlayer::wins)  // Bind the wins attribute
         .def_readonly("losses", &PyPlayer::losses)  // Bind the losses attribute
         .def_readonly("rating", &PyPlayer::rating)  // Bind the rating attribute
@@ -861,9 +411,9 @@ void BindPyPlayer(py::module_& m) {
         .def_readonly("rank", &PyPlayer::rank)  // Bind the rank attribute
         .def_readonly("tournament_reward_points", &PyPlayer::tournament_reward_points)  // Bind the tournament_reward_points attribute
         .def_readonly("morale", &PyPlayer::morale)  // Bind the morale attribute
-		.def_readonly("party_morale", &PyPlayer::party_morale)  // Bind the party_morale attribute
+        .def_readonly("party_morale", &PyPlayer::party_morale)  // Bind the party_morale attribute
         .def_readonly("experience", &PyPlayer::experience)  // Bind the experience attribute
-		.def_readonly("level", &PyPlayer::level)  // Bind the level attribute
+        .def_readonly("level", &PyPlayer::level)  // Bind the level attribute
         .def_readonly("current_kurzick", &PyPlayer::current_kurzick)  // Bind the current_kurzick attribute
         .def_readonly("total_earned_kurzick", &PyPlayer::total_earned_kurzick)  // Bind the total_earned_kurzick attribute
         .def_readonly("max_kurzick", &PyPlayer::max_kurzick) // Bind the max_kurzick attribute
@@ -878,35 +428,36 @@ void BindPyPlayer(py::module_& m) {
         .def_readonly("max_balth", &PyPlayer::max_balth)  // Bind the max_balth attribute
         .def_readonly("current_skill_points", &PyPlayer::current_skill_points)  // Bind the current_skill_points attribute
         .def_readonly("total_earned_skill_points", &PyPlayer::total_earned_skill_points)  // Bind the total_earned_skill_points attribute
-		.def_readonly("missions_completed", &PyPlayer::missions_completed)  // Bind the missions_completed attribute
-		.def_readonly("missions_bonus", &PyPlayer::missions_bonus)  // Bind the missions_bonus attribute
-		.def_readonly("missions_completed_hm", &PyPlayer::missions_completed_hm)  // Bind the missions_completed_hm attribute
-		.def_readonly("missions_bonus_hm", &PyPlayer::missions_bonus_hm)  // Bind the missions_bonus_hm attribute
-		.def_readonly("controlled_minions", &PyPlayer::controlled_minions) // Bind the controlled_minions attribute
-		.def_readonly("unlocked_maps", &PyPlayer::unlocked_map)  // Bind the unlocked_maps attribute
-		.def_readonly("learnable_character_skills", &PyPlayer::learnable_character_skills)  // Bind the learnable_character_skills attribute
-		.def_readonly("unlocked_character_skills", &PyPlayer::unlocked_character_skills)  // Bind the unlocked_character_skills attribute
+        .def_readonly("missions_completed", &PyPlayer::missions_completed)  // Bind the missions_completed attribute
+        .def_readonly("missions_bonus", &PyPlayer::missions_bonus)  // Bind the missions_bonus attribute
+        .def_readonly("missions_completed_hm", &PyPlayer::missions_completed_hm)  // Bind the missions_completed_hm attribute
+        .def_readonly("missions_bonus_hm", &PyPlayer::missions_bonus_hm)  // Bind the missions_bonus_hm attribute
+        .def_readonly("controlled_minions", &PyPlayer::controlled_minions) // Bind the controlled_minions attribute
+        .def_readonly("unlocked_maps", &PyPlayer::unlocked_map)  // Bind the unlocked_maps attribute
+        .def_readonly("learnable_character_skills", &PyPlayer::learnable_character_skills)  // Bind the learnable_character_skills attribute
+        .def_readonly("unlocked_character_skills", &PyPlayer::unlocked_character_skills)  // Bind the unlocked_character_skills attribute
 
-        .def_static("LogouttoCharacterSelect", &LogouttoCharacterSelect) // Bind the LogouttoCharacterSelect method
-        .def_static("GetIsCharacterSelectReady", &GetIsCharacterSelectReady) // Bind the GetIsCharacterSelectReady method
-        .def_static("GetAvailableCharacters", &GetAvailableCharacters) // Bind the GetAvailableCharacters method
-        .def_static("GetPreGameContext", &GetPreGameContext) // Bind the GetPreGameContext method
+
+
+        .def("SendDialog", &PyPlayer::SendDialog, py::arg("dialog_id"))  // Bind the SendDialog method
+        
+        .def("IsAgentIDValid", &PyPlayer::IsAgentIDValid, py::arg("agent_id"))  // Bind the IsAgentIDValid method
+        .def("GetChatHistory", &PyPlayer::GetChatHistory)  // Bind the GetChatHistory method
+        .def("RequestChatHistory", &PyPlayer::RequestChatHistory)  // Bind the RequestChatHistory method
+        .def("IsChatHistoryReady", &PyPlayer::IsChatHistoryReady)  // Bind the IsChatHistoryReady method
+		.def("Istyping", &PyPlayer::Istyping)  // Bind the Istyping method
+        .def("SendChatCommand", &PyPlayer::SendChatCommand, py::arg("msg"))  // Bind the SendChatCommand method
+        .def("SendChat", &PyPlayer::SendChat, py::arg("channel"), py::arg("msg"))  // Bind the SendChat method
+        .def("SendWhisper", &PyPlayer::SendWhisper, py::arg("name"), py::arg("msg"))  // Bind the SendWhisper method
+        .def("SendFakeChat", &PyPlayer::SendFakeChat, py::arg("channel"), py::arg("message"))  // Bind the SendFakeChat method
+        .def("SendFakeChatColored", &PyPlayer::SendFakeChatColored, py::arg("channel"), py::arg("message"), py::arg("r"), py::arg("g"), py::arg("b"))  // Bind the SendFakeChatColored method
+
 		
-        .def("GetGameContextPtr", &PyPlayer::GetGameContextPtr) // Bind the GetGameContextPtr method
-		.def("GetPreGameContextPtr", &PyPlayer::GetPreGameContextPtr) // Bind the GetPreGameContextPtr method
-		.def("GetWorldContextPtr", &PyPlayer::GetWorldContextPtr) // Bind the GetWorldContextPtr method
-		.def("GetCharContextPtr", &PyPlayer::GetCharContextPtr) // Bind the GetCharContextPtr method
-		.def("GetAgentContextPtr", &PyPlayer::GetAgentContextPtr) // Bind the GetAgentContextPtr method
-		.def("GetCinematicPtr", &PyPlayer::GetCinematicPtr) // Bind the GetCinematicPtr method
-		.def("GetGuildContextPtr", &PyPlayer::GetGuildContextPtr) // Bind the GetGuildContextPtr method
 		;
         
 }
 
 PYBIND11_EMBEDDED_MODULE(PyPlayer, m) {
-	BindPyTitle(m);
-	BindAvailableCharacterInfo(m);
-	BindPreGameContext(m);
     BindPyPlayer(m);
 }
 

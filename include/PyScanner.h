@@ -17,6 +17,17 @@ public:
             (GW::ScannerSection)section);
     }
 
+    // --- FindAssertion ---
+    static uintptr_t FindAssertion(const std::string& assertion_file,
+        const std::string& assertion_msg,
+        uint32_t line_number = 0,
+        int offset = 0) {
+        return GW::Scanner::FindAssertion(assertion_file.c_str(),
+            assertion_msg.c_str(),
+            line_number,
+            offset);
+    }
+
     // --- FindInRange ---
     static uintptr_t FindInRange(py::bytes pattern, const std::string& mask,
         int offset, uintptr_t start, uintptr_t end) {
@@ -24,6 +35,15 @@ public:
         return GW::Scanner::FindInRange(pat.c_str(), mask.c_str(), offset,
             (DWORD)start, (DWORD)end);
     }
+
+    // --- GetSectionAddressRange ---
+    static py::tuple GetSectionAddressRange(uint8_t section) {
+        uintptr_t start = 0;
+        uintptr_t end = 0;
+        GW::Scanner::GetSectionAddressRange((GW::ScannerSection)section, &start, &end);
+        return py::make_tuple(start, end);
+    }
+
 
     // --- FunctionFromNearCall ---
     static uintptr_t FunctionFromNearCall(uintptr_t call_addr,
@@ -113,7 +133,16 @@ PYBIND11_EMBEDDED_MODULE(PyScanner, m)
         .def_static("FindUseOfStringA", &PyScanner::FindUseOfStringA)
         .def_static("FindUseOfStringW", &PyScanner::FindUseOfStringW)
         .def_static("FindNthUseOfStringA", &PyScanner::FindNthUseOfStringA)
-        .def_static("FindNthUseOfStringW", &PyScanner::FindNthUseOfStringW);
+        .def_static("FindNthUseOfStringW", &PyScanner::FindNthUseOfStringW)
+
+        .def_static("FindAssertion", &PyScanner::FindAssertion,
+            py::arg("assertion_file"),
+            py::arg("assertion_msg"),
+            py::arg("line_number") = 0,
+            py::arg("offset") = 0)
+
+        .def_static("GetSectionAddressRange", &PyScanner::GetSectionAddressRange,
+            py::arg("section"));
 
 }
 
