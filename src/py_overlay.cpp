@@ -254,12 +254,21 @@ ZResult FindZ(float x, float y) {
 // ---------------- PUBLIC API ----------------
 float Overlay::findZ(float x, float y, uint32_t zplane_hint) {
     // If you pass 0 => no hint; if you pass player->plane => stable
-    return FindZ(x, y).z;
+    //return FindZ(x, y).z;
+    auto* player = GW::Agents::GetControlledCharacter();
+    if (!player)
+        return 0.0f;
+
+    return player->z;
 }
 uint32_t Overlay::FindZPlane(float x, float y, uint32_t zplane_hint) {
     return FindZ(x, y).plane;
-}
+    auto* player = GW::Agents::GetControlledCharacter();
+    if (!player)
+        return 0;
 
+    return static_cast<uint32_t>(player->plane);
+}
 
 
 

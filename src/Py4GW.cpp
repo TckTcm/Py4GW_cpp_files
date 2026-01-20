@@ -864,6 +864,183 @@ void RemoveAllFrameCallbacks()
 
 
 
+using CallbackId = uint64_t;
+
+class PyCallback {
+public:
+    enum class Phase : uint8_t {
+        PreUpdate = 0,
+        Data = 1,
+        Update = 2
+    };
+
+    struct Task {
+        CallbackId id;
+        std::string name;
+        Phase phase;
+        int priority;
+        uint64_t order;   // registration order
+        py::function fn;
+    };
+
+private:
+    static inline std::mutex _mutex;
+    static inline std::vector<Task> _tasks;
+    static inline CallbackId _next_id = 1;
+    static inline uint64_t _next_order = 1;
+
+public:
+    // -------------------------------------------------
+    // Register
+    // -------------------------------------------------
+    static CallbackId Register(
+        const std::string& name,
+        Phase phase,
+        py::function fn,
+        int priority = 99
+    ) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        // replace by name (keep id + order)
+        for (auto& t : _tasks) {
+            if (t.name == name && t.phase == phase) {
+                t.fn = std::move(fn);
+                t.priority = priority;
+                return t.id;
+            }
+        }
+
+        CallbackId id = _next_id++;
+
+        _tasks.push_back(Task{
+            id,
+            name,
+            phase,
+            priority,
+            _next_order++,
+            std::move(fn)
+            });
+
+        return id;
+    }
+
+    // -------------------------------------------------
+    // Remove
+    // -------------------------------------------------
+    static bool RemoveById(CallbackId id) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        auto it = std::remove_if(
+            _tasks.begin(),
+            _tasks.end(),
+            [&](const Task& t) { return t.id == id; }
+        );
+
+        if (it == _tasks.end())
+            return false;
+
+        _tasks.erase(it, _tasks.end());
+        return true;
+    }
+
+    static bool RemoveByName(const std::string& name) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        auto it = std::remove_if(
+            _tasks.begin(),
+            _tasks.end(),
+            [&](const Task& t) { return t.name == name; }
+        );
+
+        if (it == _tasks.end())
+            return false;
+
+        _tasks.erase(it, _tasks.end());
+        return true;
+    }
+
+    static void RemoveAll() {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _tasks.clear();
+    }
+
+    // -------------------------------------------------
+    // Execute one phase (barrier enforced externally)
+    // -------------------------------------------------
+    static void ExecutePhase(Phase phase) {
+        std::vector<Task*> phase_tasks;
+
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            for (auto& t : _tasks) {
+                if (t.phase == phase)
+                    phase_tasks.push_back(&t);
+            }
+        }
+
+        std::sort(
+            phase_tasks.begin(),
+            phase_tasks.end(),
+            [](const Task* a, const Task* b) {
+                if (a->priority != b->priority)
+                    return a->priority < b->priority;
+                return a->order < b->order;
+            }
+        );
+
+        for (Task* t : phase_tasks) {
+            try {
+                t->fn();
+            }
+            catch (const py::error_already_set&) {
+                PyErr_Print();
+            }
+        }
+    }
+
+    static std::vector<
+        std::tuple<
+        uint64_t,     // id
+        std::string,    // name
+        int,            // phase
+        int,            // priority
+        uint64_t        // order
+        >
+    > GetCallbackInfo()
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        std::vector<
+            std::tuple<
+            uint64_t,
+            std::string,
+            int,
+            int,
+            uint64_t
+            >
+        > out;
+
+        out.reserve(_tasks.size());
+
+        for (const auto& t : _tasks) {
+            out.emplace_back(
+                t.id,
+                t.name,
+                static_cast<int>(t.phase),
+                t.priority,
+                t.order
+            );
+        }
+
+        return out;
+    }
+
+	static void Clear() {
+		std::lock_guard<std::mutex> lock(_mutex);
+		_tasks.clear();
+	}
+};
+
 
 /* ------------------------------------------------------------------*/
 /* -------------------------- ImGui ---------------------------------*/
@@ -1508,6 +1685,10 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
 
     py::gil_scoped_acquire gil;
 
+    PyCallback::ExecutePhase(PyCallback::Phase::PreUpdate);
+    PyCallback::ExecutePhase(PyCallback::Phase::Data);
+    PyCallback::ExecutePhase(PyCallback::Phase::Update);
+
     std::lock_guard<std::mutex> lock(g_frame_callbacks_mutex);
 
     for (auto& cb : g_frame_callbacks) {
@@ -1538,6 +1719,9 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
     }
 }
 
+
+
+
 /* ------------------------------------------------------------------*/
 /* --------------------- Misc Functions  ----------------------------*/
 /* ------------------------------------------------------------------*/
@@ -1564,11 +1748,11 @@ void bind_Game(py::module_& game)
     game.def("enqueue",&EnqueuePythonCallback,"Enqueue a Python callback to run on the GW game thread");
 
     game.def("get_tick_count64",&Get_Tick_Count64,"Get the current tick count as a 64-bit integer");
-    game.def("register_callback",&RegisterFrameCallback,"Register a named per-frame callback (idempotent by name)" );
-    game.def("remove_callback_by_id",&RemoveFrameCallbackById,"Remove a per-frame callback by id");
-    game.def("remove_callback",&RemoveFrameCallbackByName,"Remove a per-frame callback by name");
-    game.def("clear_callbacks", &RemoveAllFrameCallbacks, "Remove all registered per-frame callbacks");
-	
+    //game.def("register_callback",&RegisterFrameCallback,"Register a named per-frame callback (idempotent by name)" );
+    //game.def("remove_callback_by_id",&RemoveFrameCallbackById,"Remove a per-frame callback by id");
+    //game.def("remove_callback",&RemoveFrameCallbackByName,"Remove a per-frame callback by name");
+    //game.def("clear_callbacks", &RemoveAllFrameCallbacks, "Remove all registered per-frame callbacks");
+    ;
 
         
 }
@@ -1702,4 +1886,54 @@ PYBIND11_EMBEDDED_MODULE(Py4GW, m)
 	bind_Window(console);
 	bind_ScriptControl(console);
 	bind_Ping(m);
+}
+
+
+PYBIND11_EMBEDDED_MODULE(PyCallback, m)
+{
+    m.doc() = "Frame callback scheduler with phased execution and priorities";
+
+    py::class_<PyCallback>(m, "PyCallback")
+        .def_static(
+            "Register",
+            &PyCallback::Register,
+            py::arg("name"),
+            py::arg("fn"),
+            py::arg("phase"),
+            py::arg("priority") = 99
+        )
+        .def_static(
+            "RemoveById",
+            &PyCallback::RemoveById,
+            py::arg("id")
+        )
+        .def_static(
+            "RemoveByName",
+            &PyCallback::RemoveByName,
+            py::arg("name")
+        )
+        .def_static(
+            "Clear",
+            &PyCallback::Clear
+        )
+        .def_static(
+            "GetCallbackInfo",
+            &PyCallback::GetCallbackInfo,
+            R"doc(Returns a list of tuples:
+                (
+                    id: int,
+                    name: str,
+                    phase: int,
+                    priority: int,
+                    order: int
+                )
+                )doc"
+                );
+
+    // Optional but recommended: expose Phase enum
+    py::enum_<PyCallback::Phase>(m, "Phase")
+        .value("PreUpdate", PyCallback::Phase::PreUpdate)
+        .value("Data", PyCallback::Phase::Data)
+        .value("Update", PyCallback::Phase::Update)
+        .export_values();
 }
