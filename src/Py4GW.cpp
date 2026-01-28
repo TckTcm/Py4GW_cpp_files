@@ -111,9 +111,15 @@ bool modal_result_ok = false;
 bool first_run = true;
 bool console_open = true;
 
+bool enabled_update_to_run = false;
+
 bool check_login_screen = true;
 
+py::object update_function;
+py::object draw_function;
 
+py::object update_function2;
+py::object draw_function2;
 
 /* ------------------------------------------------------------------*/
 /* ------------------------ CALLBACKS -------------------------------*/
@@ -437,6 +443,43 @@ HWND Py4GW::get_gw_window_handle() {
 /* -------------------------- Python --------------------------------*/
 /* ------------------------------------------------------------------*/
 
+static bool CallPythonFunctionSafe(py::object& fn, const char* label, ScriptState& state_to_stop)
+{
+    if (!fn || fn.is_none())
+        return false;
+
+    try {
+        fn();
+        return true;
+    }
+    catch (const py::error_already_set& e) {
+        state_to_stop = ScriptState::Stopped;
+        Log("Py4GW", std::string("Python error (") + label + "): " + e.what(), MessageType::Error);
+        return false;
+    }
+}
+
+static py::object GetCallableIfExists(py::object& module, const char* name)
+{
+    if (!module || module.is_none())
+        return py::object();
+
+    if (!py::hasattr(module, name))
+        return py::object();
+
+    py::object obj = module.attr(name);
+    if (!obj || obj.is_none())
+        return py::object();
+
+    // pybind11 does not have py::callable(); use CPython API
+    if (!PyCallable_Check(obj.ptr()))
+        return py::object();
+
+    return obj;
+}
+
+
+
 // Function to load and execute Python scripts
 std::string LoadPythonScript(const std::string& file_path)
 {
@@ -498,15 +541,33 @@ bool LoadAndExecuteScriptOnce()
             return false;
         }
 
-        if (py::hasattr(script_module, "main")) {
-            main_function = script_module.attr("main");
+        // Capture entrypoints
+        main_function = GetCallableIfExists(script_module, "main");
+        update_function = GetCallableIfExists(script_module, "update");
+        draw_function = GetCallableIfExists(script_module, "draw");
+
+        if (draw_function && !draw_function.is_none()) {
+            Log("Py4GW", "draw() function found.", MessageType::Notice);
+        }
+        if (update_function && !update_function.is_none()) {
+            Log("Py4GW", "update() function found.", MessageType::Notice);
+        }
+        if (main_function && !main_function.is_none()) {
             Log("Py4GW", "main() function found.", MessageType::Notice);
+        }
+
+        // Valid script if it has at least one entrypoint
+        if ((main_function && !main_function.is_none()) ||
+            (update_function && !update_function.is_none()) ||
+            (draw_function && !draw_function.is_none()))
+        {
             return true;
         }
-        else {
-            script_state = ScriptState::Stopped;
-            Log("Py4GW", "main() function not found in the script.", MessageType::Error);
-        }
+
+        script_state = ScriptState::Stopped;
+        Log("Py4GW", "No main()/update()/draw() function found in the script.", MessageType::Error);
+        return false;
+
     }
     catch (const py::error_already_set& e) {
         // This will catch other Python errors not related to the script execution itself
@@ -571,15 +632,22 @@ bool LoadAndExecuteScriptOnce2()
             return false;
         }
 
-        if (py::hasattr(script_module2, "main")) {
-            main_function2 = script_module2.attr("main");
-            //Log("Py4GW", "main() function found.", MessageType::Notice);
+        main_function2 = GetCallableIfExists(script_module2, "main");
+        update_function2 = GetCallableIfExists(script_module2, "update");
+        draw_function2 = GetCallableIfExists(script_module2, "draw");
+
+        // Valid if at least one exists
+        if ((main_function2 && !main_function2.is_none()) ||
+            (update_function2 && !update_function2.is_none()) ||
+            (draw_function2 && !draw_function2.is_none()))
+        {
             return true;
         }
-        else {
-            script_state2 = ScriptState::Stopped;
-            Log("Py4GW", "main() function not found in the Main Menu script.", MessageType::Error);
-        }
+
+        script_state2 = ScriptState::Stopped;
+        Log("Py4GW", "No main()/update()/draw() function found in the Main Menu script.", MessageType::Error);
+        return false;
+
     }
     catch (const py::error_already_set& e) {
         // This will catch other Python errors not related to the script execution itself
@@ -625,11 +693,61 @@ void ExecutePythonScript2()
     }
 }
 
+void ExecutePythonScript_Update()
+{
+    // prefer update()
+    if (update_function && !update_function.is_none()) {
+        CallPythonFunctionSafe(update_function, "update()", script_state);
+        return;
+    }
+
+    // If no update(), do nothing.
+    // IMPORTANT: We do NOT run main() here, because main may contain ImGui calls.
+}
+
+void ExecutePythonScript_Draw()
+{
+    // prefer draw()
+    if (draw_function && !draw_function.is_none()) {
+        CallPythonFunctionSafe(draw_function, "draw()", script_state);
+        return;
+    }
+
+    // fallback to legacy main()
+    if (main_function && !main_function.is_none()) {
+        CallPythonFunctionSafe(main_function, "main()", script_state);
+    }
+}
+
+void ExecutePythonScript2_Update()
+{
+    if (update_function2 && !update_function2.is_none()) {
+        CallPythonFunctionSafe(update_function2, "update2()", script_state2);
+    }
+}
+
+void ExecutePythonScript2_Draw()
+{
+    if (draw_function2 && !draw_function2.is_none()) {
+        CallPythonFunctionSafe(draw_function2, "draw2()", script_state2);
+        return;
+    }
+
+    if (main_function2 && !main_function2.is_none()) {
+        CallPythonFunctionSafe(main_function2, "main2()", script_state2);
+    }
+}
+
+
 void ResetScriptEnvironment()
 {
     script_content.clear();
     script_state = ScriptState::Stopped;
+
     main_function = py::object();
+    update_function = py::object();
+    draw_function = py::object();
+
     script_module = py::object();
     Log("Py4GW", "Python environment reset.", MessageType::Notice);
 }
@@ -638,7 +756,11 @@ void ResetScriptEnvironment2()
 {
     script_content2.clear();
     script_state2 = ScriptState::Stopped;
+
     main_function2 = py::object();
+    update_function2 = py::object();
+    draw_function2 = py::object();
+
     script_module2 = py::object();
     Log("Py4GW", "Python environment Main Menu reset.", MessageType::Notice);
 }
@@ -1533,9 +1655,35 @@ void Py4GW::Terminate() {
     }
 }
 
-void Py4GW::Update() {
+void Py4GW::Update()
+{
+    if (!enabled_update_to_run){
+		return;
+    }
 
+
+
+    static uint32_t last_py_update = 0;
+    //uint32_t now = GetTickCount();
+    //if (now - last_py_update < 16.66) // 60Hz
+    //    return;
+    //last_py_update = now;
+
+    // Only update logic here (NO ImGui)
+    py::gil_scoped_acquire gil;
+
+    // If you still want these phases to be logic-only, keep them here:
+    PyCallback::ExecutePhase(PyCallback::Phase::PreUpdate);
+    PyCallback::ExecutePhase(PyCallback::Phase::Data);
+    PyCallback::ExecutePhase(PyCallback::Phase::Update);
+
+    if (script_state == ScriptState::Running && !script_content.empty())
+        ExecutePythonScript_Update();
+
+    if (script_state2 == ScriptState::Running && !script_content2.empty())
+        ExecutePythonScript2_Update();
 }
+
 
 void Py4GW::Draw(IDirect3DDevice9* device) {
 
@@ -1683,33 +1831,26 @@ void Py4GW::Draw(IDirect3DDevice9* device) {
         modal_result_ok = false; // Reset modal result state
     }
 
+    enabled_update_to_run = true;
+
     py::gil_scoped_acquire gil;
 
-    PyCallback::ExecutePhase(PyCallback::Phase::PreUpdate);
-    PyCallback::ExecutePhase(PyCallback::Phase::Data);
-    PyCallback::ExecutePhase(PyCallback::Phase::Update);
-
-    std::lock_guard<std::mutex> lock(g_frame_callbacks_mutex);
-
-    for (auto& cb : g_frame_callbacks) {
-        try {
-            cb.fn();
-        }
-        catch (const py::error_already_set& e) {
-            continue; // Skip errors in frame callbacks
+    // Any ImGui-related callbacks should remain here
+    {
+        std::lock_guard<std::mutex> lock(g_frame_callbacks_mutex);
+        for (auto& cb : g_frame_callbacks) {
+            try { cb.fn(); }
+            catch (const py::error_already_set&) { continue; }
         }
     }
 
+    // Draw phase for scripts
+    if (script_state == ScriptState::Running && !script_content.empty())
+        ExecutePythonScript_Draw();
 
+    if (script_state2 == ScriptState::Running && !script_content2.empty())
+        ExecutePythonScript2_Draw();
 
-    // Check if the script is in the running state and the script content is loaded
-    if (script_state == ScriptState::Running && !script_content.empty()) {
-        ExecutePythonScript();
-    }
-
-    if (script_state2 == ScriptState::Running && !script_content2.empty()) {
-        ExecutePythonScript2();
-    }
 
     if (mixed_deferred.active && mixed_deferred.timer.hasElapsed(mixed_deferred.delay_ms)) {
         if (mixed_deferred.action) {

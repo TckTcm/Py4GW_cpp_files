@@ -69,6 +69,50 @@ void Py2DRenderer::SetupProjection() {
     g_d3d_device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&proj));
 }
 
+void Py2DRenderer::build_pathing_trapezoid_geometry(D3DCOLOR color) {
+    this->color = color;   // SAME behavior as set_primitives
+
+    primitives.clear();
+
+    const auto* pmaps = GW::Map::GetPathingMap();
+    if (!pmaps || pmaps->size() == 0)
+        return;
+
+    // Optional reserve
+    size_t total = 0;
+    for (size_t i = 0; i < pmaps->size(); ++i) {
+        total += (*pmaps)[i].trapezoid_count;
+    }
+    primitives.reserve(total);
+
+    for (size_t i = 0; i < pmaps->size(); ++i) {
+        const GW::PathingMap& layer = (*pmaps)[i];
+        const GW::PathingTrapezoid* traps = layer.trapezoids;
+        if (!traps || layer.trapezoid_count == 0)
+            continue;
+
+        for (uint32_t t = 0; t < layer.trapezoid_count; ++t) {
+            const GW::PathingTrapezoid& tr = traps[t];
+
+            std::vector<Point2D> quad;
+            quad.reserve(4);
+
+            quad.emplace_back((int)tr.XTL, (int)tr.YT);
+            quad.emplace_back((int)tr.XTR, (int)tr.YT);
+            quad.emplace_back((int)tr.XBL, (int)tr.YB);
+            quad.emplace_back((int)tr.XBR, (int)tr.YB);
+
+            primitives.emplace_back(std::move(quad));
+        }
+    }
+}
+
+
+
+
+
+
+
 void Py2DRenderer::ApplyStencilMask() {
     if (!g_d3d_device) return;
 
@@ -1077,6 +1121,7 @@ void bind_2drenderer(py::module_& m) {
     py::class_<Py2DRenderer>(m, "Py2DRenderer")
         .def(py::init<>())
         .def("set_primitives", &Py2DRenderer::set_primitives, py::arg("primitives"), py::arg("draw_color") = 0xFFFFFFFF)
+		.def("build_pathing_trapezoid_geometry", &Py2DRenderer::build_pathing_trapezoid_geometry, py::arg("color") = 0xFF00FF00)
         .def("set_world_zoom_x", &Py2DRenderer::set_world_zoom_x, py::arg("zoom"))
         .def("set_world_zoom_y", &Py2DRenderer::set_world_zoom_y, py::arg("zoom"))
         .def("set_world_pan", &Py2DRenderer::set_world_pan, py::arg("x"), py::arg("y"))

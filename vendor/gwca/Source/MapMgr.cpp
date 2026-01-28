@@ -169,8 +169,8 @@ namespace {
             map_type_instance_infos_size = (*(uint32_t*)(address + 5)) / sizeof(MapTypeInstanceInfo);
         }
 
-        //WorldMap_UICallback_Func = (UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x83\xe8\x04\x83\xf8\x43", "xxxxxx"));
-        WorldMap_UICallback_Func = (UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x83\xe8\x04\x83\xf8\x50", "xxxxxx"));
+        //WorldMap_UICallback_Func = (UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x83\xe8\x04\x83\xf8\x50", "xxxxxx"));
+        WorldMap_UICallback_Func = (UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x83\xe8\x04\x83\xf8\x4d", "xxxxxx"));
 
 
         //MissionMap_UICallback_Func = (UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x81\xfb\x67\x01\x00\x10", "xxxxxx"));

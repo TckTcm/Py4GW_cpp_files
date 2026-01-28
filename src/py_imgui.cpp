@@ -1465,6 +1465,27 @@ void Dummy(const int width, const int height) {
 	ImGui::Dummy(ImVec2(width, height));
 }
 
+// Path API Wrappers
+void ImGui_PathClear() {
+    ImGui::GetWindowDrawList()->PathClear();
+}
+
+void ImGui_PathLineTo(float x, float y) {
+    ImGui::GetWindowDrawList()->PathLineTo(ImVec2(x, y));
+}
+
+void ImGui_PathArcTo(float x, float y, float radius, float a_min, float a_max, int num_segments = 0) {
+    ImGui::GetWindowDrawList()->PathArcTo(ImVec2(x, y), radius, a_min, a_max, num_segments);
+}
+
+void ImGui_PathFillConvex(ImU32 col) {
+    ImGui::GetWindowDrawList()->PathFillConvex(col);
+}
+
+void ImGui_PathStroke(ImU32 col, bool closed = false, float thickness = 1.0f) {
+    ImGui::GetWindowDrawList()->PathStroke(col, closed, thickness);
+}
+
 
 struct SafeImGuiIO {
 	float display_size_x = 0.0f;
@@ -1574,7 +1595,7 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
         .value("NoBringToFrontOnFocus", ImGuiWindowFlags_NoBringToFrontOnFocus)
         .value("AlwaysVerticalScrollbar", ImGuiWindowFlags_AlwaysVerticalScrollbar)
         .value("AlwaysHorizontalScrollbar", ImGuiWindowFlags_AlwaysHorizontalScrollbar)
-        //.value("AlwaysUseWindowPadding", ImGuiWindowFlags_AlwaysUseWindowPadding)
+        .value("NoInputs", ImGuiWindowFlags_NoInputs)
         .value("NoNavInputs", ImGuiWindowFlags_NoNavInputs)
         .value("NoNavFocus", ImGuiWindowFlags_NoNavFocus)
         .value("UnsavedDocument", ImGuiWindowFlags_UnsavedDocument)
@@ -2304,7 +2325,16 @@ PYBIND11_EMBEDDED_MODULE(PyImGui, m) {
     m.def("collapsing_header", py::overload_cast<const std::string&, ImGuiTreeNodeFlags>(&ImGui_CollapsingHeader));
 
     //Dummy
-	m.def("dummy", &Dummy, "Creates a dummy in ImGui");
+    m.def("dummy", &Dummy, "Creates a dummy in ImGui");
+
+    m.def("path_clear", &ImGui_PathClear, "Clear current path");
+    m.def("path_line_to", &ImGui_PathLineTo, py::arg("x"), py::arg("y"), "Add a line to the path");
+    m.def("path_arc_to", &ImGui_PathArcTo,
+        py::arg("x"), py::arg("y"), py::arg("radius"),
+        py::arg("a_min"), py::arg("a_max"), py::arg("num_segments") = 0,
+        "Add an arc to the path (angles in radians)");
+    m.def("path_fill_convex", &ImGui_PathFillConvex, py::arg("col"), "Fill the path with a convex shape");
+    m.def("path_stroke", &ImGui_PathStroke, py::arg("col"), py::arg("closed") = false, py::arg("thickness") = 1.0f, "Draw the path outline");
 
 
     // Safer ctor: ensure context exists before constructing (prevents crash)

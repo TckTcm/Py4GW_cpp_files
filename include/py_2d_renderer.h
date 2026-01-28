@@ -5,6 +5,7 @@
 class Py2DRenderer {
 private:
     Overlay overlay;
+    std::vector<std::vector<Point2D>> primitives;
 public:
 
     void set_primitives(const std::vector<std::vector<Point2D>>& prims, D3DCOLOR color);
@@ -27,6 +28,8 @@ public:
 
     void set_rectangle_mask(bool enabled);
     void set_rectangle_mask_bounds(float x, float y, float width, float height);
+
+    void build_pathing_trapezoid_geometry(D3DCOLOR color);
 
     void render();
 
@@ -74,7 +77,7 @@ private:
     };
 
 
-    std::vector<std::vector<Point2D>> primitives;
+    
     D3DCOLOR color;
     float world_zoom_x = 1.0f;
     float world_zoom_y = 1.0f;
