@@ -305,8 +305,8 @@ void PyPlayer::SendFakeChatColored(int channel, std::string message, int r, int 
 
 
 
-void PyPlayer::SendDialog(uint32_t dialog_id) {
-    GW::Agents::SendDialog(dialog_id);
+void PyPlayer::SendAgentDialog(uint32_t dialog_id) {
+    GW::Agents::SendAgentDialog(dialog_id);
 }
 
 
@@ -461,7 +461,7 @@ void BindPyPlayer(py::module_& m) {
         .def_readonly("learnable_character_skills", &PyPlayer::learnable_character_skills)  // Bind the learnable_character_skills attribute
         .def_readonly("unlocked_character_skills", &PyPlayer::unlocked_character_skills)  // Bind the unlocked_character_skills attribute
 
-        .def("SendDialog", &PyPlayer::SendDialog, py::arg("dialog_id"))  // Bind the SendDialog method
+        .def("SendAgentDialog", &PyPlayer::SendAgentDialog, py::arg("dialog_id"))  // Bind the SendAgentDialog method
         .def("ChangeTarget", &PyPlayer::ChangeTarget, py::arg("target_id"))  // Bind the ChangeTarget method
         .def("InteractAgent", &PyPlayer::InteractAgent, py::arg("agent_id"), py::arg("call_target"))  // Bind the InteractAgent method
 

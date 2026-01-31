@@ -289,7 +289,7 @@ namespace GW {
             }
             return false;
         }
-        bool SendDialog(uint32_t dialog_id) {
+        bool SendAgentDialog(uint32_t dialog_id) {
             const auto a = GW::Agents::GetAgentByID(dialog_agent_id);
             if (!a) return false;
             if (a->GetIsGadgetType()) {

@@ -77,7 +77,7 @@ public:
     bool Move(float x, float y);
     bool InteractAgent(int agent_id, bool call_target);
     bool OpenLockedChest(bool use_key);
-    void SendDialog(uint32_t dialog_id);
+    void SendAgentDialog(uint32_t dialog_id);
 
 	bool SetActiveTitle(uint32_t title_id);
     bool RemoveActiveTitle();
