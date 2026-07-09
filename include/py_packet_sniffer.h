@@ -63,7 +63,8 @@ public:
     std::mutex mutex_;
     std::vector<PacketLogEntry> logs_;
 
-    std::vector<uint32_t> stoc_packet_sizes_;
+    std::vector<uint32_t*> stoc_packet_fields_;
+    std::vector<uint32_t> stoc_packet_field_counts_;
     std::vector<GW::HookEntry> stoc_hook_entries_;
 
     bool stoc_initialized_ = false;

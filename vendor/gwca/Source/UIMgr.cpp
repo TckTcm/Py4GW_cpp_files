@@ -335,7 +335,48 @@ namespace {
     GWCA_API static std::vector<UIPayloadDump> ui_payload_logs;
     static const size_t MAX_PAYLOAD_SIZE = 64;
 
+    static constexpr uint32_t INVENTORY_GET_AGENT_FRAME_MESSAGE = 0x100001A8;
+    static constexpr uint32_t NOISY_FRAME_MSGS[] = {
+        0x01, 0x08, 0x0a, 0x15, 0x16, 0x17, 0x22, 0x25,
+        0x2b, 0x2c, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+        0x3a, 0x3b, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c,
+        0x5d, 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x64, 0x65,
+        0x67, 0x1000001c
+    };
+    static constexpr uint32_t NOISY_GLOBAL_MSGS[] = {
+        0x10000019, 0x1000001a, 0x1000001b
+    };
+    static constexpr uint32_t NOISY_EMPTY_PAYLOAD_MSGS[] = {
+        0x10000048, 0x10000008, 0x10000007, 0x10000190
+    };
     static constexpr uint32_t FILTERED_MSGS[] = { 0x15, 0x16, 0x25, 0x2b, 0x2c, 0x35, 0x38, 0x5f };
+
+    bool ShouldSuppressPayloadLog(uint32_t msgid, bool is_frame_message) {
+        if (!is_frame_message) {
+            for (uint32_t m : NOISY_GLOBAL_MSGS) {
+                if (msgid == m)
+                    return true;
+            }
+            return false;
+        }
+        if (msgid == INVENTORY_GET_AGENT_FRAME_MESSAGE)
+            return true;
+        for (uint32_t m : NOISY_FRAME_MSGS) {
+            if (msgid == m)
+                return true;
+        }
+        return false;
+    }
+
+    bool ShouldSuppressPayloadLog(uint32_t msgid, bool w_empty, bool l_empty) {
+        if (!(w_empty && l_empty))
+            return false;
+        for (uint32_t m : NOISY_EMPTY_PAYLOAD_MSGS) {
+            if (msgid == m)
+                return true;
+        }
+        return false;
+    }
 
     bool ShouldFilterMsg(uint32_t msgid) {
         for (uint32_t m : FILTERED_MSGS) {
@@ -373,8 +414,9 @@ namespace {
         uint32_t frame_id
     )
     {
-        if (is_frame_message)
+        if (ShouldSuppressPayloadLog(msgid, is_frame_message))
             return;
+
         // --- FILTER HERE ---
         //if (ShouldFilterMsg(msgid))
         //    return;
@@ -391,6 +433,9 @@ namespace {
 
         SafeDumpBytes(d.w_bytes, wparam, MAX_PAYLOAD_SIZE);
         SafeDumpBytes(d.l_bytes, lparam, MAX_PAYLOAD_SIZE);
+
+        if (ShouldSuppressPayloadLog(msgid, d.w_bytes.empty(), d.l_bytes.empty()))
+            return;
 
         ui_payload_logs.emplace_back(std::move(d));
 

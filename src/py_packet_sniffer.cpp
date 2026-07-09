@@ -92,6 +92,11 @@ namespace {
     }
 
     uint32_t SafeCopyStoCPacket(const void* src, uint32_t copy_size, std::vector<uint8_t>& out_data) {
+        if (!src || copy_size == 0) {
+            out_data.clear();
+            return 0;
+        }
+
         __try {
             out_data.resize(copy_size);
             memcpy(out_data.data(), src, copy_size);
@@ -100,6 +105,162 @@ namespace {
         __except (EXCEPTION_EXECUTE_HANDLER) {
             out_data.resize(sizeof(GW::Packet::StoC::PacketBase));
             memcpy(out_data.data(), src, sizeof(GW::Packet::StoC::PacketBase));
+            return sizeof(GW::Packet::StoC::PacketBase);
+        }
+    }
+
+    enum class StoCFieldType {
+        Ignore,
+        AgentId,
+        Float,
+        Vect2,
+        Vect3,
+        Byte,
+        Word,
+        Dword,
+        Blob,
+        String16,
+        Array8,
+        Array16,
+        Array32,
+        NestedStruct,
+        Unknown,
+    };
+
+    StoCFieldType GetStoCFieldType(uint32_t type, uint32_t size, uint32_t count) {
+        switch (type) {
+        case 0: return StoCFieldType::AgentId;
+        case 1: return StoCFieldType::Float;
+        case 2: return StoCFieldType::Vect2;
+        case 3: return StoCFieldType::Vect3;
+        case 4:
+        case 8:
+            switch (count) {
+            case 1: return StoCFieldType::Byte;
+            case 2: return StoCFieldType::Word;
+            case 4: return StoCFieldType::Dword;
+            default: break;
+            }
+            break;
+        case 5:
+        case 9:
+            return StoCFieldType::Blob;
+        case 6:
+        case 10:
+            return StoCFieldType::Ignore;
+        case 7:
+            return StoCFieldType::String16;
+        case 11:
+            switch (size) {
+            case 1: return StoCFieldType::Array8;
+            case 2: return StoCFieldType::Array16;
+            case 4: return StoCFieldType::Array32;
+            default: break;
+            }
+            break;
+        case 12:
+            return StoCFieldType::NestedStruct;
+        default:
+            break;
+        }
+        return StoCFieldType::Unknown;
+    }
+
+    bool AdvanceStoCCursor(const uint8_t*& cursor, const uint8_t* max_end, size_t bytes) {
+        if (cursor > max_end || bytes > static_cast<size_t>(max_end - cursor)) {
+            return false;
+        }
+        cursor += bytes;
+        return true;
+    }
+
+    bool MeasureStoCNestedFields(const uint32_t* fields, uint32_t field_count, uint32_t repeat,
+        const uint8_t*& cursor, const uint8_t* max_end) {
+        if (!fields || repeat > 1024) {
+            return false;
+        }
+
+        for (uint32_t rep = 0; rep < repeat; ++rep) {
+            for (uint32_t i = 0; i < field_count; ++i) {
+                const uint32_t field = fields[i];
+                const uint32_t type = (field >> 0) & 0xF;
+                const uint32_t size = (field >> 4) & 0xF;
+                const uint32_t count = (field >> 8) & 0xFFFF;
+
+                switch (GetStoCFieldType(type, size, count)) {
+                case StoCFieldType::Ignore:
+                    break;
+                case StoCFieldType::AgentId:
+                case StoCFieldType::Float:
+                case StoCFieldType::Byte:
+                case StoCFieldType::Word:
+                case StoCFieldType::Dword:
+                    if (!AdvanceStoCCursor(cursor, max_end, sizeof(uint32_t))) return false;
+                    break;
+                case StoCFieldType::Vect2:
+                    if (!AdvanceStoCCursor(cursor, max_end, sizeof(float) * 2)) return false;
+                    break;
+                case StoCFieldType::Vect3:
+                    if (!AdvanceStoCCursor(cursor, max_end, sizeof(float) * 3)) return false;
+                    break;
+                case StoCFieldType::Blob:
+                    if (!AdvanceStoCCursor(cursor, max_end, count)) return false;
+                    break;
+                case StoCFieldType::String16:
+                    if (!AdvanceStoCCursor(cursor, max_end, static_cast<size_t>(count) * sizeof(wchar_t))) return false;
+                    break;
+                case StoCFieldType::Array8:
+                    if (!AdvanceStoCCursor(cursor, max_end, count)) return false;
+                    break;
+                case StoCFieldType::Array16:
+                    if (!AdvanceStoCCursor(cursor, max_end, sizeof(uint32_t) + (static_cast<size_t>(count) * sizeof(uint16_t)))) return false;
+                    break;
+                case StoCFieldType::Array32:
+                    if (!AdvanceStoCCursor(cursor, max_end, static_cast<size_t>(count) * sizeof(uint32_t))) return false;
+                    break;
+                case StoCFieldType::NestedStruct: {
+                    if (cursor > max_end || sizeof(uint32_t) > static_cast<size_t>(max_end - cursor)) {
+                        return false;
+                    }
+                    uint32_t struct_count = 0;
+                    memcpy(&struct_count, cursor, sizeof(struct_count));
+                    cursor += sizeof(uint32_t);
+                    if (struct_count > 1024) {
+                        return false;
+                    }
+                    if (!MeasureStoCNestedFields(fields + i + 1, field_count - i - 1, struct_count, cursor, max_end)) {
+                        return false;
+                    }
+                    return true;
+                }
+                case StoCFieldType::Unknown:
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    uint32_t MeasureStoCPacketSize(const uint32_t* fields, uint32_t field_count, const GW::Packet::StoC::PacketBase* packet) {
+        if (!fields || field_count == 0 || !packet) {
+            return sizeof(GW::Packet::StoC::PacketBase);
+        }
+
+        __try {
+            const auto* start = reinterpret_cast<const uint8_t*>(packet);
+            const uint8_t* cursor = start + sizeof(uint32_t);
+            const uint8_t* max_end = start + PacketSniffer::kMaxStoCPacketBuffer;
+            if (!MeasureStoCNestedFields(fields + 1, field_count - 1, 1, cursor, max_end)) {
+                return sizeof(GW::Packet::StoC::PacketBase);
+            }
+
+            const size_t measured_size = static_cast<size_t>(cursor - start);
+            if (measured_size < sizeof(GW::Packet::StoC::PacketBase) || measured_size > PacketSniffer::kMaxStoCPacketBuffer) {
+                return sizeof(GW::Packet::StoC::PacketBase);
+            }
+            return static_cast<uint32_t>(measured_size);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
             return sizeof(GW::Packet::StoC::PacketBase);
         }
     }
@@ -222,17 +383,19 @@ bool PacketSniffer::InitializeStoC() {
         return true;
     }
 
-    stoc_packet_sizes_.assign(STOC_HEADER_COUNT, sizeof(GW::Packet::StoC::PacketBase));
+    stoc_packet_fields_.assign(STOC_HEADER_COUNT, nullptr);
+    stoc_packet_field_counts_.assign(STOC_HEADER_COUNT, 0);
     auto* handlers = ResolveStoCHandlerArray();
     if (!handlers) {
         LogScanError("StoC initialization aborted because the handler array could not be resolved.");
         return false;
     }
 
-    const auto count = std::min<size_t>(handlers->size(), stoc_packet_sizes_.size());
+    const auto count = std::min<size_t>(handlers->size(), stoc_packet_fields_.size());
     for (size_t i = 0; i < count; ++i) {
-        const uint32_t template_size = handlers->at(static_cast<uint32_t>(i)).template_size;
-        stoc_packet_sizes_[i] = template_size ? template_size : sizeof(GW::Packet::StoC::PacketBase);
+        const auto& handler = handlers->at(static_cast<uint32_t>(i));
+        stoc_packet_fields_[i] = handler.packet_template;
+        stoc_packet_field_counts_[i] = handler.template_size;
     }
 
     for (uint32_t header = 0; header < STOC_HEADER_COUNT; ++header) {
@@ -245,12 +408,12 @@ bool PacketSniffer::InitializeStoC() {
                 entry.direction = PacketDirection::StoC;
                 entry.header = pak->header;
 
-                const uint32_t packet_size = pak->header < stoc_packet_sizes_.size()
-                    ? stoc_packet_sizes_[pak->header]
+                const uint32_t packet_size = pak->header < stoc_packet_fields_.size()
+                    ? MeasureStoCPacketSize(stoc_packet_fields_[pak->header], stoc_packet_field_counts_[pak->header], pak)
                     : sizeof(GW::Packet::StoC::PacketBase);
                 const uint32_t copy_size = std::min<uint32_t>(packet_size, static_cast<uint32_t>(kMaxStoCPacketBuffer));
                 const uint32_t copied = SafeCopyStoCPacket(pak, copy_size, entry.data);
-                entry.size = packet_size ? packet_size : copied;
+                entry.size = copied;
 
                 LogPacket(std::move(entry));
             },
