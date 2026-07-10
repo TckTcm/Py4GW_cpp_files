@@ -75,6 +75,8 @@ public:
     uint32_t GetPlayerStatus();
     bool SetPlayerStatus(uint32_t status);
     bool ChangeTarget(uint32_t target_id);
+    bool ChangeTargetManual(uint32_t target_id);
+    pybind11::dict GetTargetSelectionState();
     bool Move(float x, float y, int zplane);
     bool Move(float x, float y);
     bool InteractAgent(int agent_id, bool call_target);
@@ -98,6 +100,4 @@ public:
 	static uintptr_t GetAvailableCharactersPtr();
     
 };
-
-
 

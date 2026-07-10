@@ -45,7 +45,11 @@ namespace {
     typedef void(*ChangeTarget_pt)(uint32_t agent_id, uint32_t auto_target_id);
     ChangeTarget_pt ChangeTarget_Func = 0, ChangeTarget_Ret = 0;
 
+    typedef void(*ChangeTargetManual_pt)(uint32_t agent_id);
+    ChangeTargetManual_pt ChangeTargetManual_Func = 0;
+
     uint32_t current_target_id = 0;
+    TargetSelectionState target_selection_state;
 
     typedef void(*CallTarget_pt)(CallTargetType type, uint32_t agent_id);
     CallTarget_pt CallTarget_Func = 0, CallTarget_Ret = 0;
@@ -124,6 +128,43 @@ namespace {
         return agents && agent_id < agents->size() && agents->at(agent_id) != nullptr;
     }
 
+    bool GetMainModuleTextRange(uintptr_t& start, uintptr_t& end) {
+        const auto module = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        if (!module)
+            return false;
+        const auto dos_header = reinterpret_cast<const IMAGE_DOS_HEADER*>(module);
+        if (dos_header->e_magic != IMAGE_DOS_SIGNATURE || dos_header->e_lfanew <= 0)
+            return false;
+        const auto nt_header = reinterpret_cast<const IMAGE_NT_HEADERS*>(module + dos_header->e_lfanew);
+        if (nt_header->Signature != IMAGE_NT_SIGNATURE)
+            return false;
+        const auto sections = IMAGE_FIRST_SECTION(const_cast<IMAGE_NT_HEADERS*>(nt_header));
+        for (WORD i = 0; i < nt_header->FileHeader.NumberOfSections; ++i) {
+            if (memcmp(sections[i].Name, ".text", 5) != 0)
+                continue;
+            start = module + sections[i].VirtualAddress;
+            end = start + sections[i].Misc.VirtualSize;
+            return start < end;
+        }
+        return false;
+    }
+
+    uintptr_t FindWrapperCalling(const char* pattern, const char* mask, size_t call_offset, uintptr_t callee) {
+        uintptr_t text_start = 0;
+        uintptr_t text_end = 0;
+        if (!callee || !GetMainModuleTextRange(text_start, text_end))
+            return 0;
+        auto candidate = Scanner::FindInRange(pattern, mask, 0, text_start, text_end);
+        while (candidate) {
+            if (Scanner::FunctionFromNearCall(candidate + call_offset) == callee)
+                return candidate;
+            if (candidate + 1 >= text_end)
+                break;
+            candidate = Scanner::FindInRange(pattern, mask, 0, candidate + 1, text_end);
+        }
+        return 0;
+    }
+
     void OnUIMessage(GW::HookStatus* status, UI::UIMessage message_id, void* wparam, void*) {
         if (status->blocked)
             return;
@@ -140,6 +181,9 @@ namespace {
         case UI::UIMessage::kSendChangeTarget: {
             if (ChangeTarget_Ret) {
                 const auto packet = static_cast<UI::UIPacket::kSendChangeTarget*>(wparam);
+                target_selection_state.requested_manual_target_id = packet->target_id;
+                target_selection_state.requested_auto_target_id = packet->auto_target_id;
+                ++target_selection_state.request_revision;
                 // Last-moment guard, synchronous with the real SetSelections call:
                 // skip if either id would trip AvSelect.cpp:780/781
                 // (!(id && !ManagerFindAgent(id))) instead of letting the client crash.
@@ -155,8 +199,15 @@ namespace {
             }
         } break;
         case UI::UIMessage::kChangeTarget: {
-            const auto msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wparam);
+            const auto msg = static_cast<GW::UI::UIPacket::kChangeTarget*>(wparam);
             current_target_id = msg->manual_target_id;
+            target_selection_state.evaluated_target_id = msg->evaluated_target_id;
+            target_selection_state.auto_target_id = msg->auto_target_id;
+            target_selection_state.manual_target_id = msg->manual_target_id;
+            target_selection_state.evaluated_target_changed = msg->has_evaluated_target_changed;
+            target_selection_state.auto_target_changed = msg->has_auto_target_changed;
+            target_selection_state.manual_target_changed = msg->has_manual_target_changed;
+            ++target_selection_state.change_revision;
         } break;
         case UI::UIMessage::kSendCallTarget: {
             if (CallTarget_Ret) {
@@ -184,6 +235,18 @@ namespace {
         uintptr_t address = 0;
 
         ChangeTarget_Func = (ChangeTarget_pt)GW::Scanner::ToFunctionStart(Scanner::FindAssertion("AvSelect.cpp", "!(autoAgentId && !ManagerFindAgent(autoAgentId))",0,0));
+
+        // AvSelect::SetManualSelection(agent_id): preserves the current auto
+        // target and forwards (agent_id, auto_target_id) to SetSelections.
+        address = FindWrapperCalling(
+            "\x55\x8B\xEC\xFF\x35\x00\x00\x00\x00\xFF\x75\x08\xE8\x00\x00\x00\x00\x83\xC4\x08\x5D\xC3",
+            "xxxxx????xxxx????xxxxx",
+            0xC,
+            reinterpret_cast<uintptr_t>(ChangeTarget_Func)
+        );
+        if (address) {
+            ChangeTargetManual_Func = (ChangeTargetManual_pt)address;
+        }
 
         address = Scanner::Find("\x8b\x0c\x90\x85\xc9\x74\x19", "xxxxxxx", -0x4);
         if (address && Scanner::IsValidPtr(*(uintptr_t*)address))
@@ -233,6 +296,7 @@ namespace {
         GWCA_INFO("[SCAN] PlayerAgentIdPtr = %p", PlayerAgentIdPtr);
         GWCA_INFO("[SCAN] MoveTo_Func = %p", MoveTo_Func);
         GWCA_INFO("[SCAN] ChangeTargetFunction = %p", ChangeTarget_Func);
+        GWCA_INFO("[SCAN] ChangeTargetManualFunction = %p", ChangeTargetManual_Func);
         GWCA_INFO("[SCAN] SendAgentDialog_Func = %p", SendAgentDialog_Func);
         GWCA_INFO("[SCAN] SendGadgetDialog_Func = %p", SendGadgetDialog_Func);
         GWCA_INFO("[SCAN] CallTarget_Func = %p", CallTarget_Func);
@@ -242,6 +306,7 @@ namespace {
         Logger::AssertAddress("PlayerAgentIdPtr", (uintptr_t)PlayerAgentIdPtr, "Agent Module");
 		Logger::AssertAddress("MoveTo_Func", (uintptr_t)MoveTo_Func, "Agent Module");
 		Logger::AssertAddress("ChangeTarget_Func", (uintptr_t)ChangeTarget_Func, "Agent Module");
+		Logger::AssertAddress("ChangeTargetManual_Func", (uintptr_t)ChangeTargetManual_Func, "Agent Module");
 		Logger::AssertAddress("SendAgentDialog_Func", (uintptr_t)SendAgentDialog_Func, "Agent Module");
 		Logger::AssertAddress("SendGadgetDialog_Func", (uintptr_t)SendGadgetDialog_Func, "Agent Module");
 		Logger::AssertAddress("CallTarget_Func", (uintptr_t)CallTarget_Func, "Agent Module");
@@ -343,6 +408,10 @@ namespace GW {
             return current_target_id;
         }
 
+        TargetSelectionState GetTargetSelectionState() {
+            return target_selection_state;
+        }
+
         bool ChangeTarget(AgentID agent_id) {
             UI::UIPacket::kSendChangeTarget packet = { agent_id, 0 };
             return UI::SendUIMessage(UI::UIMessage::kSendChangeTarget, &packet);
@@ -350,6 +419,15 @@ namespace GW {
 
         bool ChangeTarget(const Agent* agent) {
             return agent ? ChangeTarget(agent->agent_id) : false;
+        }
+
+        bool ChangeTargetManual(AgentID agent_id) {
+            if (!ManagerCanFindAgent(agent_id))
+                return false;
+            if (!ChangeTargetManual_Func)
+                return ChangeTarget(agent_id);
+            ChangeTargetManual_Func(agent_id);
+            return true;
         }
 
         bool Move(float x, float y, uint32_t zplane /*= 0*/) {

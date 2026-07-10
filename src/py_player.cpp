@@ -419,6 +419,16 @@ bool PyPlayer::InteractAgent(int agent_id, bool call_target) {
     return true;
 }
 
+bool PyPlayer::OpenLockedChest(bool use_key) {
+    const auto target = GW::Agents::GetTarget();
+    if (!(target && target->GetIsGadgetType()))
+        return false;
+    GW::GameThread::Enqueue([use_key] {
+        GW::Items::OpenLockedChest(use_key, false);
+    });
+    return true;
+}
+
 bool PyPlayer::ChangeTarget(uint32_t new_target_id) {
     if (new_target_id == 0) return false;
 
@@ -431,6 +441,34 @@ bool PyPlayer::ChangeTarget(uint32_t new_target_id) {
         }
         });
     return true;
+}
+
+bool PyPlayer::ChangeTargetManual(uint32_t new_target_id) {
+    if (new_target_id == 0) return false;
+    if (!GW::Agents::GetAgentByID(new_target_id)) return false;
+
+    GW::GameThread::Enqueue([new_target_id] {
+        if (GW::Agents::GetAgentByID(new_target_id)) {
+            GW::Agents::ChangeTargetManual(new_target_id);
+        }
+    });
+    return true;
+}
+
+py::dict PyPlayer::GetTargetSelectionState() {
+    const auto state = GW::Agents::GetTargetSelectionState();
+    py::dict result;
+    result["requested_manual_target_id"] = state.requested_manual_target_id;
+    result["requested_auto_target_id"] = state.requested_auto_target_id;
+    result["evaluated_target_id"] = state.evaluated_target_id;
+    result["auto_target_id"] = state.auto_target_id;
+    result["manual_target_id"] = state.manual_target_id;
+    result["evaluated_target_changed"] = state.evaluated_target_changed;
+    result["auto_target_changed"] = state.auto_target_changed;
+    result["manual_target_changed"] = state.manual_target_changed;
+    result["request_revision"] = state.request_revision;
+    result["change_revision"] = state.change_revision;
+    return result;
 }
 
 bool PyPlayer::CallTarget(int agent_id) {
@@ -498,7 +536,10 @@ void BindPyPlayer(py::module_& m) {
 
         .def("SendDialog", &PyPlayer::SendDialog, py::arg("dialog_id"))  // Bind the SendDialog method
         .def("ChangeTarget", &PyPlayer::ChangeTarget, py::arg("target_id"))  // Bind the ChangeTarget method
+        .def("ChangeTargetManual", &PyPlayer::ChangeTargetManual, py::arg("target_id"))
+        .def("GetTargetSelectionState", &PyPlayer::GetTargetSelectionState)
         .def("InteractAgent", &PyPlayer::InteractAgent, py::arg("agent_id"), py::arg("call_target"))  // Bind the InteractAgent method
+        .def("OpenLockedChest", &PyPlayer::OpenLockedChest, py::arg("use_key"))
         .def("CallTarget", &PyPlayer::CallTarget, py::arg("agent_id"))  // Forwards to GW::Agents::CallTarget(uint32_t) via game thread
 
         .def("IsAgentIDValid", &PyPlayer::IsAgentIDValid, py::arg("agent_id"))  // Bind the IsAgentIDValid method
@@ -528,4 +569,3 @@ void BindPyPlayer(py::module_& m) {
 PYBIND11_EMBEDDED_MODULE(PyPlayer, m) {
     BindPyPlayer(m);
 }
-

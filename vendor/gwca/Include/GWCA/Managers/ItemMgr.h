@@ -84,6 +84,10 @@ namespace GW {
         // Drop amount gold on ground.
         GWCA_API bool DropGold(uint32_t amount = 1);
 
+        // Open the currently selected locked chest. Set require_range to false
+        // only for callers intentionally reproducing the game's raw request.
+        GWCA_API bool OpenLockedChest(bool use_key = true, bool require_range = true);
+
         // Begin the salvage process for an item
         GWCA_API bool SalvageStart(uint32_t salvage_kit_id, uint32_t item_id);
 

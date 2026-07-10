@@ -615,6 +615,21 @@ namespace GW {
             return true;
         }
 
+        bool OpenLockedChest(bool use_key, bool require_range) {
+            const auto target = Agents::GetTarget();
+            if (!(OpenLockedChest_Func && target && target->GetIsGadgetType()))
+                return false;
+            if (require_range) {
+                const auto player = Agents::GetControlledCharacter();
+                if (!(player && GetDistance(player->pos, target->pos) < Constants::Range::Area))
+                    return false;
+            }
+            if (!use_key && !GetItemByModelId(Constants::ItemID::Lockpick))
+                return false;
+            OpenLockedChest_Func(use_key ? 1U : 2U);
+            return true;
+        }
+
         bool SalvageSessionCancel() {
             //return SalvageSessionCancel_Func ? SalvageSessionCancel_Func(), true : false;
             if (!salvage_context)

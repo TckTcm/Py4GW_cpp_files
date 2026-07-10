@@ -39,6 +39,19 @@ namespace GW {
         None = 0xFF
     };
 
+    struct TargetSelectionState {
+        AgentID requested_manual_target_id = 0;
+        AgentID requested_auto_target_id = 0;
+        AgentID evaluated_target_id = 0;
+        AgentID auto_target_id = 0;
+        AgentID manual_target_id = 0;
+        bool evaluated_target_changed = false;
+        bool auto_target_changed = false;
+        bool manual_target_changed = false;
+        uint32_t request_revision = 0;
+        uint32_t change_revision = 0;
+    };
+
 
     namespace Agents {
         // === Dialogs ===
@@ -56,6 +69,8 @@ namespace GW {
         GWCA_API uint32_t GetControlledCharacterId();
         // Get Agent ID of current target
         GWCA_API uint32_t GetTargetId();
+        // Snapshot of the native manual/auto/evaluated selection state.
+        GWCA_API TargetSelectionState GetTargetSelectionState();
         // Get Agent ID of current hover
         GWCA_API uint32_t GetMouseoverId();
 
@@ -98,6 +113,9 @@ namespace GW {
         // Change targeted agent to (Agent)
         GWCA_API bool ChangeTarget(const Agent *agent);
         GWCA_API bool ChangeTarget(AgentID agent_id);
+        // Match a manual click: replace only the manual target and preserve the
+        // client's current automatic target selection.
+        GWCA_API bool ChangeTargetManual(AgentID agent_id);
 
         // Move to specified coordinates.
         // Note: will do nothing if coordinate is outside the map!
