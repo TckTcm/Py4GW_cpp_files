@@ -20,6 +20,7 @@
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/ScannerPatterns.h>
 #include <GWCA/Logger/Logger.h>
 
 namespace {
@@ -238,10 +239,11 @@ namespace {
 
         // AvSelect::SetManualSelection(agent_id): preserves the current auto
         // target and forwards (agent_id, auto_target_id) to SetSelections.
+        constexpr auto& manual_target_pattern = Scanner::Patterns::AgentMgr::ChangeTargetManualWrapper;
         address = FindWrapperCalling(
-            "\x55\x8B\xEC\xFF\x35\x00\x00\x00\x00\xFF\x75\x08\xE8\x00\x00\x00\x00\x83\xC4\x08\x5D\xC3",
-            "xxxxx????xxxx????xxxxx",
-            0xC,
+            manual_target_pattern.bytes,
+            manual_target_pattern.mask,
+            manual_target_pattern.call_offset,
             reinterpret_cast<uintptr_t>(ChangeTarget_Func)
         );
         if (address) {
